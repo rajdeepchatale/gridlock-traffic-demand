@@ -1,4 +1,4 @@
-# 🏆 Bengaluru Traffic Demand Predictor — Gridlock Hackathon 2.0
+# Bengaluru Traffic Demand Predictor — Gridlock Hackathon 2.0
 
 An end-to-end Machine Learning pipeline to forecast spatial-temporal traffic demand in Bengaluru, developed for **Gridlock Hackathon 2.0**. This solution leverages advanced geospatial and temporal feature engineering coupled with an optimized gradient-boosted tree ensemble to achieve a **90.92% public leaderboard R² score** (Out-of-Fold R² of **97.59%**).
 
