@@ -1,0 +1,4 @@
+catboost_info/
+predictions*.csv
+.DS_Store
+__pycache__/
