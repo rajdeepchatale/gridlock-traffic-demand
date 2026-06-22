@@ -100,10 +100,11 @@ def api_metadata():
 # Entry Point
 # ────────────────────────────────────────────────────────
 if __name__ == '__main__':
+    import os
     print("=" * 65)
     print("   GRIDLOCK 2.0 — EVENT-DRIVEN CONGESTION MANAGEMENT SYSTEM")
     print("   Bengaluru Traffic Police (ASTraM) Prototype")
     print("=" * 65)
-    print("→ Starting server at http://127.0.0.1:5000")
+    print("→ Starting Command Center production server")
     print("=" * 65)
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

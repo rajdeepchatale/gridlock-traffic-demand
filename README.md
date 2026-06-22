@@ -83,24 +83,17 @@ Gridlock 2.0 does not treat events generically. It contains calibrated spatial-t
 
 ---
 
-## ⚙️ Setup & Execution
+## ⚙️ Live Access & Usage
 
-### 1. Install Dependencies
-Ensure you have Python 3.9+ installed. Run:
-```bash
-pip install -r requirements.txt
-```
+### 🚀 Live Web Application (Production)
+The prototype is fully deployed and accessible at:
+👉 **[gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)**
 
-### 2. Live Access or Local Execution
-* **Live Web App (Production)**: Access directly at [gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)
-* **Local Run**:
-  Run the Flask server:
-  ```bash
-  python app.py
-  ```
-  Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your web browser.
-
-### 3. Usage
-* Select the **Event Type** and **Venue / Location** from the configuration panel.
-* Click **Generate Prediction & Deployment Order**.
-* View the computed impact area on the map, scroll to inspect the generated **Bandobast Shift Schedule**, evaluate the **Flipkart SLA Impact Cards**, and copy the **WhatsApp Constable Alert** to send directly to your team on the ground.
+### 📋 How to Use
+1. **Configure the Event**: Select the **Event Type** and **Venue / Location** from the input control panel.
+2. **Execute Prediction**: Click **Generate Prediction & Deployment Order**.
+3. **Analyze Outcomes**: 
+   * View the computed impact footprint and congestion severities on the interactive map.
+   * Review the generated **Special Bandobast Order** with detailed constable shift assignments.
+   * Review the **Flipkart Last-Mile Delivery Impact** cards.
+   * Copy the formatted **WhatsApp Field Alert** for low-connectivity dispatch.
