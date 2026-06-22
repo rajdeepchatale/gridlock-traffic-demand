@@ -91,12 +91,14 @@ Ensure you have Python 3.9+ installed. Run:
 pip install -r requirements.txt
 ```
 
-### 2. Start the Command Center
-Run the Flask server:
-```bash
-python app.py
-```
-Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your web browser.
+### 2. Live Access or Local Execution
+* **Live Web App (Production)**: Access directly at [gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)
+* **Local Run**:
+  Run the Flask server:
+  ```bash
+  python app.py
+  ```
+  Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your web browser.
 
 ### 3. Usage
 * Select the **Event Type** and **Venue / Location** from the configuration panel.
