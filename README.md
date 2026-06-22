@@ -1,6 +1,8 @@
 # Gridlock 2.0 — Event-Driven Congestion Command Center
 ### An Operational Decision Support System for Bengaluru Traffic Police (ASTraM) & Flipkart Last-Mile Logistics
 
+⚡ **Live Deployed Prototype**: [gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)
+
 Developed for **Gridlock Hackathon 2.0 — Round 2**. 
 
 ---
