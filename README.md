@@ -1,82 +1,102 @@
-# Bengaluru Traffic Demand Predictor — Gridlock Hackathon 2.0
+# Gridlock 2.0 — Event-Driven Congestion Command Center
+### An Operational Decision Support System for Bengaluru Traffic Police (ASTraM) & Flipkart Last-Mile Logistics
 
-An end-to-end Machine Learning pipeline to forecast spatial-temporal traffic demand in Bengaluru, developed for **Gridlock Hackathon 2.0**. This solution leverages advanced geospatial and temporal feature engineering coupled with an optimized gradient-boosted tree ensemble to achieve a **90.92% public leaderboard R² score** (Out-of-Fold R² of **97.59%**).
-
----
-
-## 🎯 Task & Evaluation
-- **Objective**: Predict traffic demand at specific locations (represented as `geohash` codes) and times (`timestamp` strings) in Bengaluru.
-- **Problem Type**: Tabular Regression.
-- **Target Variable**: `demand` (continuous variable normalized in the range `[0, 1]`).
-- **Evaluation Metric**: $\text{Score} = \max(0, 100 \times R^2)$
+Developed for **Gridlock Hackathon 2.0 — Round 2**. 
 
 ---
 
-## 🚀 Key Highlights & Architecture
+## 🎯 The Core Problem & Philosophy
+Most hackathon solutions focus on building **passive dashboards** and **predictive heatmaps**. While mathematically interesting, they fail to resolve the real-world operational challenges faced on Bengaluru’s streets. 
 
-```mermaid
-graph TD
-    A[Raw Data] --> B[Geospatial Decoding]
-    A[Raw Data] --> C[Temporal Feature Engineering]
-    A[Raw Data] --> D[Proximity Calculations]
-    
-    B --> E[Unified Feature Set]
-    C --> E
-    D --> E
-    
-    E --> F[LightGBM Regressor]
-    E --> G[XGBoost Regressor]
-    E --> H[CatBoost Regressor]
-    
-    F --> I[Out-of-Fold Predictions]
-    G --> I
-    H --> I
-    
-    I --> J[SciPy SLSQP Linear Blending]
-    J --> K[Clipped Prediction Output]
+A Traffic Inspector managing 15 junctions during an IPL match doesn't need to see a heatmap; they need to know **which constable should stand where, at what time, and with what equipment**. A Flipkart logistics manager doesn't just need to know that traffic is slow; they need to know **which delivery SLAs are threatened and how to routing-adjust their last-mile dispatch**.
+
+**Gridlock 2.0 is an active decision-engine.** It builds on the high-precision spatial-temporal traffic demand predictor from Round 1 and translates predictions directly into **actionable deployment orders, last-mile mitigation schedules, and economic ROI metrics**.
+
+---
+
+## 🚀 Key Operational Features
+
+```
+                   ┌──────────────────────────────┐
+                   │    Round 1 ML Demand Model   │
+                   └──────────────┬───────────────┘
+                                  │ (Baseline Traffic Load)
+                                  ▼
+                   ┌──────────────────────────────┐
+                   │  Event Impact Propagation    │
+                   └──────────────┬───────────────┘
+                                  │ (Spatial-Temporal Surges)
+                                  ▼
+      ┌───────────────────────────┼───────────────────────────┐
+      ▼                           ▼                           ▼
+┌───────────┐               ┌───────────┐               ┌───────────┐
+│ Bandobast │               │ Flipkart  │               │ Economic  │
+│ Deploy    │               │ Last-Mile │               │ ROI       │
+│ Orders    │               │ Analytics │               │ Summary   │
+└─────┬─────┘               └───────────┘               └───────────┘
+      │
+      ▼
+┌───────────┐
+│ WhatsApp  │
+│ Dispatch  │
+└───────────┘
 ```
 
-### 1. Robust Spatial-Temporal Feature Engineering
-Tree models struggle to generalize on raw timestamps and location strings without proper context. We designed key features to capture the traffic dynamics of Bengaluru:
-* **Geospatial Coordinates**: Decoded 5-character geohash strings into high-precision latitude/longitude values.
-* **Proximity to Traffic Bottlenecks**: Computed exact Euclidean distances to major transit and tech hubs:
-  * *Majestic Transit Hub*
-  * *Whitefield Tech Corridor*
-  * *Electronic City*
-  * *Manyata Tech Park*
-* **Temporal Cycling**: Captured time-of-day and day-of-week context using trigonometric sine/cos transformations of hours and minutes.
-* **Historical Baselines**: 
-  * `geohash_hour_mean`: Same-hour location-specific historical baseline context from the preceding day.
-  * `early_morning_mean`: Location-specific morning context (0:00 to 2:00 AM) to establish baseline demand.
-* **Out-of-Fold Target Encoding**: High-cardinality target encoder for `geohash` locations using a 5-fold cross-validation scheme to prevent data leakage.
+### 1. Special Bandobast Order Generator
+Converts traffic surge predictions into standard-format **Special Bandobast Orders** ready for Traffic Division deployment.
+* **Manpower Allocation**: Automatically assigns necessary constable staffing counts (above typical baselines) for affected intersections based on computed congestion.
+* **Equipment & Engineering Guidelines**: Recommends specific barricade classifications (e.g., Type-A Standard, Type-B Heavy, or Type-C Full Road Closure) and signal override adjustments (e.g., extend green cycle by 30 seconds on primary dispersal corridors).
+* **Smart Diversion Routes**: Outlines specific rerouting pathways to redirect vehicle surges, saving an estimated 10-20 minutes per commuter.
 
-### 2. Multi-Model Gradient Boosted Ensemble
-We trained three distinct state-of-the-art gradient boosted models directly on the continuous `demand` target to prevent variance scaling issues:
-* **LightGBM**: Highly efficient tree growth focusing on leaf-wise splits.
-* **XGBoost**: Robust regularized histogram-based learning.
-* **CatBoost**: Excels at handling categorical attributes and reduces target leakage.
+### 2. Flipkart Last-Mile Logistics Impact Layer
+Designed specifically to protect Flipkart's delivery SLA commitments during major congestion windows.
+* **SLA Disruption Forecast**: Predicts the exact number of delayed packages and identifies impacted delivery zones based on spatial event proximity.
+* **Cost of Delay Mitigation**: Quantifies financial liabilities for last-mile delays and recommends strategic parcel dispatch throttling and hub pre-positioning.
 
-### 3. Optimal SLSQP Blending Solver
-Instead of standard arithmetic averaging, we formulated an optimization problem to find the optimal blending weights $w_i$ that minimize the Out-of-Fold (OOF) Mean Squared Error:
+### 3. Economic "Cost of Inaction" Calculator
+Translates traffic delays into hard financial metrics to help BTP justify deployment budgets and municipal investments.
+* **Commuter Time Value**: Computes total person-hours lost based on standard Bengaluru wage statistics.
+* **Resource Optimization**: Compares the economic losses of traffic gridlock (fuel wastage, lost productivity, delayed freight) against the low operational cost of police deployment, calculating the direct ROI of active traffic management.
+* **Environmental Impact**: Models extra metric tons of CO₂ emissions generated by idling vehicles in bottleneck zones.
 
-$$\min_{w} \sum (y - \sum_i w_i \hat{y}_i)^2 \quad \text{subject to} \quad \sum_i w_i = 1, \, w_i \ge 0$$
-
-Using SciPy's Sequential Least Squares Programming (SLSQP) solver, we computed optimal ensemble weights to mathematically minimize prediction variance.
+### 4. Low-Connectivity WhatsApp Dispatcher
+Police constables on-ground do not operate from desktop dashboards. Gridlock 2.0 generates copy-paste ready, lightweight **WhatsApp Alert Messages** that can be dispatched to traffic division channels, detailing duty shifts, assigned junctions, and target instructions.
 
 ---
 
-## 📈 Model Performance & Validation Results
-
-| Model / Ensemble Method | Out-of-Fold (OOF) $R^2$ Score | Public Leaderboard $R^2$ Score |
-| :--- | :---: | :---: |
-| **LightGBM** | 97.48% | — |
-| **XGBoost** | 97.30% | — |
-| **CatBoost** | 97.59% | — |
-| **★ Optimal SLSQP Ensemble** | **97.59%** | **90.92%** |
+## 🗺️ Bengaluru-Specific Event Intelligence
+Gridlock 2.0 does not treat events generically. It contains calibrated spatial-temporal profiles for real Bengaluru venues and scenarios:
+* **M. Chinnaswamy Stadium (IPL/Cricket)**: High evening crowd surges impacting Central Division corridors (MG Road, Brigade Road, Cubbon Park).
+* **Palace Grounds (Large Concerts/Exhibitions)**: North Division bottleneck surges affecting Bellary Road, Hebbal Flyover, and Mekhri Circle.
+* **Freedom Park (Protests & Marches)**: Linear movement corridor blocks impacting Majestic, Seshadri Road, and Anand Rao Circle.
+* **Rain-Induced Flooding**: High-impact weather anomalies causing waterlogging and extreme delays at critical arterial junctions (Silk Board, KR Puram, ORR).
+* **Metro Construction**: Permanent road narrowing bottlenecks where capacity-ratio thresholds are highly sensitive.
 
 ---
 
-## 📂 Codebase Directory Structure
-* [solution.py](file:///Users/rajdeepchatale/Documents/Gridlock%20Hackathon%202.0/solution.py): The complete training and inference pipeline, containing automated preprocessing, feature engineering, model cross-validation, SciPy weight optimization, and prediction export.
-* [post_process.py](file:///Users/rajdeepchatale/Documents/Gridlock%20Hackathon%202.0/post_process.py): Script containing strategic post-processing experiments (e.g. multiplicative scaling thresholds).
-* [.gitignore](file:///Users/rajdeepchatale/Documents/Gridlock%20Hackathon%202.0/.gitignore): Configured to ignore raw large datasets (`dataset/train.csv`, `dataset/test.csv`) and output csv files (`predictions.csv`) to keep the repository lightweight and clean.
+## 📊 Technical Stack & Calibrated Models
+* **Backend Prediction Engine**: Written in Python using optimized BPR (Bureau of Public Roads) congestion curves, calibrated with high-precision mixed-traffic coefficients typical of Indian street systems (incorporating pedestrian friction and signal cycles).
+* **Web Interface**: Lightweight Flask API server hosting a premium, dark-themed command dashboard styled with vanilla CSS glassmorphism.
+* **Mapping**: Powered by Leaflet JS configured with a MapMyIndia-inspired dark tile skin, dynamically plotting venue impact radiuses and glowing junction severity markers (Critical, High, Moderate, Low).
+
+---
+
+## ⚙️ Setup & Execution
+
+### 1. Install Dependencies
+Ensure you have Python 3.9+ installed. Run:
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Start the Command Center
+Run the Flask server:
+```bash
+python app.py
+```
+Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your web browser.
+
+### 3. Usage
+* Select the **Event Type** and **Venue / Location** from the configuration panel.
+* Click **Generate Prediction & Deployment Order**.
+* View the computed impact area on the map, scroll to inspect the generated **Bandobast Shift Schedule**, evaluate the **Flipkart SLA Impact Cards**, and copy the **WhatsApp Constable Alert** to send directly to your team on the ground.

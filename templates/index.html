@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridlock 2.0 — Event-Driven Congestion Command Center | Bengaluru Traffic Police</title>
+    <meta name="description" content="AI-powered event congestion management system for Bengaluru Traffic Police (ASTraM). Predict impact, generate deployment orders, and optimize traffic flow.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- ═══ Top Nav Bar ═══ -->
+    <nav class="top-nav" id="topNav">
+        <div class="nav-left">
+            <div class="nav-logo">
+                <span class="logo-icon">🚦</span>
+                <div class="logo-text">
+                    <span class="logo-title">GRIDLOCK 2.0</span>
+                    <span class="logo-subtitle">ASTraM Command Center</span>
+                </div>
+            </div>
+        </div>
+        <div class="nav-center">
+            <span class="nav-badge live-badge">
+                <span class="pulse-dot"></span>
+                PROTOTYPE
+            </span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-badge">Bengaluru Traffic Police</span>
+            <span class="nav-badge accent">Flipkart × MapMyIndia</span>
+        </div>
+    </nav>
+
+    <!-- ═══ Hero Section ═══ -->
+    <section class="hero-section" id="heroSection">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span class="hero-line1">Event-Driven Congestion</span>
+                <span class="hero-line2">Command Center</span>
+            </h1>
+            <p class="hero-desc">Predict traffic impact of any event in Bengaluru. Generate deployment orders. Save lives and lakhs.</p>
+            <button class="hero-cta" onclick="scrollToInput()">
+                <span>Analyze an Event</span>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v14m0 0l5-5m-5 5l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="hero-stats" id="heroStats">
+            <div class="stat-card">
+                <span class="stat-value">30+</span>
+                <span class="stat-label">Junctions Mapped</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">8</span>
+                <span class="stat-label">Event Types</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">10</span>
+                <span class="stat-label">BTP Zones</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">9</span>
+                <span class="stat-label">Major Venues</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ Event Input Section ═══ -->
+    <section class="input-section" id="inputSection">
+        <div class="section-header">
+            <h2 class="section-title">📋 Event Configuration</h2>
+            <p class="section-desc">Configure event parameters to generate impact prediction and deployment order</p>
+        </div>
+        <div class="input-grid">
+            <div class="input-group">
+                <label for="eventType">Event Type</label>
+                <select id="eventType">
+                    <option value="ipl_match">🏏 IPL Cricket Match</option>
+                    <option value="political_rally">📢 Political Rally / Protest</option>
+                    <option value="religious_festival">🛕 Religious Festival / Procession</option>
+                    <option value="concert">🎵 Concert / Entertainment</option>
+                    <option value="exhibition">🎪 Exhibition / Trade Fair</option>
+                    <option value="rain_flooding">🌧️ Heavy Rain / Urban Flooding</option>
+                    <option value="construction">🚧 Metro/Road Construction</option>
+                    <option value="vip_movement">🚔 VIP / VVIP Motorcade</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="venueSelect">Venue / Location</label>
+                <select id="venueSelect">
+                    <option value="chinnaswamy">M. Chinnaswamy Stadium</option>
+                    <option value="kanteerava">Kanteerava Indoor Stadium</option>
+                    <option value="palace_grounds">Palace Grounds</option>
+                    <option value="freedom_park_venue">Freedom Park</option>
+                    <option value="vidhana_soudha_venue">Vidhana Soudha</option>
+                    <option value="lalbagh">Lalbagh Botanical Garden</option>
+                    <option value="commercial_street">Commercial Street</option>
+                    <option value="dharmaraya_temple">Dharmaraya Swamy Temple</option>
+                    <option value="ulsoor_lake">Ulsoor Lake / Halasuru</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="eventDate">Event Date</label>
+                <input type="date" id="eventDate" value="2026-06-28">
+            </div>
+            <div class="input-group">
+                <label for="eventTime">Event Start Time</label>
+                <input type="time" id="eventTime" value="19:30">
+            </div>
+            <div class="input-group">
+                <label for="expectedCrowd">Expected Crowd (optional)</label>
+                <input type="number" id="expectedCrowd" placeholder="Leave blank for auto-estimate" min="100" max="200000">
+            </div>
+            <div class="input-group btn-group">
+                <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+                    <span class="btn-icon">⚡</span>
+                    <span>Generate Prediction & Deployment Order</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ Loading Overlay ═══ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <p class="loader-text">Running impact prediction engine...</p>
+            <p class="loader-sub">Analyzing junctions • Computing deployments • Calculating costs</p>
+        </div>
+    </div>
+
+    <!-- ═══ Results Container (hidden until prediction) ═══ -->
+    <div class="results-container" id="resultsContainer" style="display:none;">
+
+        <!-- Impact Summary Cards -->
+        <section class="summary-section" id="summarySection">
+            <div class="section-header">
+                <h2 class="section-title">📊 Impact Summary</h2>
+                <div class="event-badge" id="eventBadge"></div>
+            </div>
+            <div class="summary-grid" id="summaryGrid"></div>
+        </section>
+
+        <!-- Map Section -->
+        <section class="map-section" id="mapSection">
+            <div class="section-header">
+                <h2 class="section-title">🗺️ Bengaluru Impact Map</h2>
+                <div class="map-legend">
+                    <span class="legend-item"><span class="legend-dot critical"></span>Critical</span>
+                    <span class="legend-item"><span class="legend-dot high"></span>High</span>
+                    <span class="legend-item"><span class="legend-dot moderate"></span>Moderate</span>
+                    <span class="legend-item"><span class="legend-dot low"></span>Low</span>
+                    <span class="legend-item"><span class="legend-dot venue"></span>Event Venue</span>
+                </div>
+            </div>
+            <div class="map-container" id="mapContainer"></div>
+        </section>
+
+        <!-- Congestion Timeline -->
+        <section class="timeline-section" id="timelineSection">
+            <div class="section-header">
+                <h2 class="section-title">⏱️ Congestion Timeline</h2>
+                <p class="section-desc">Hourly congestion load progression during the event</p>
+            </div>
+            <div class="timeline-chart" id="timelineChart"></div>
+        </section>
+
+        <!-- Junction Impact Table -->
+        <section class="table-section" id="tableSection">
+            <div class="section-header">
+                <h2 class="section-title">🚧 Junction-Level Impact Analysis</h2>
+                <p class="section-desc">Detailed impact at each affected junction with deployment recommendations</p>
+            </div>
+            <div class="table-wrapper">
+                <table class="impact-table" id="impactTable">
+                    <thead>
+                        <tr>
+                            <th>Junction</th>
+                            <th>Zone</th>
+                            <th>Dist (km)</th>
+                            <th>Severity</th>
+                            <th>Capacity Ratio</th>
+                            <th>Delay (No Deploy)</th>
+                            <th>Delay (Deploy)</th>
+                            <th>Constables</th>
+                        </tr>
+                    </thead>
+                    <tbody id="impactTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Bandobast Order -->
+        <section class="bandobast-section" id="bandobastSection">
+            <div class="section-header">
+                <h2 class="section-title">📋 Bandobast Deployment Order</h2>
+                <p class="section-desc">Ready-to-use field deployment order for BTP Traffic Inspectors</p>
+            </div>
+            <div class="bandobast-card" id="bandobastCard"></div>
+        </section>
+
+        <!-- Economic Impact -->
+        <section class="economics-section" id="economicsSection">
+            <div class="section-header">
+                <h2 class="section-title">💰 Economic Impact Analysis</h2>
+                <p class="section-desc">Cost of inaction vs. deployment investment — ROI for Bengaluru</p>
+            </div>
+            <div class="economics-grid" id="economicsGrid"></div>
+        </section>
+
+        <!-- Flipkart Delivery Impact -->
+        <section class="flipkart-section" id="flipkartSection">
+            <div class="section-header">
+                <h2 class="section-title">📦 Flipkart Last-Mile Delivery Impact</h2>
+                <p class="section-desc">How this event impacts Flipkart's delivery operations in affected zones</p>
+            </div>
+            <div class="flipkart-grid" id="flipkartGrid"></div>
+        </section>
+
+        <!-- WhatsApp Alert Preview -->
+        <section class="whatsapp-section" id="whatsappSection">
+            <div class="section-header">
+                <h2 class="section-title">📱 WhatsApp Field Alert</h2>
+                <p class="section-desc">Ready-to-send alert for constables on ground — works without internet dashboard</p>
+            </div>
+            <div class="whatsapp-container">
+                <div class="whatsapp-phone">
+                    <div class="phone-header">
+                        <span class="phone-back">←</span>
+                        <div class="phone-contact">
+                            <span class="contact-avatar">🚔</span>
+                            <div>
+                                <span class="contact-name">BTP ASTraM Alerts</span>
+                                <span class="contact-status">online</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phone-body" id="whatsappBody"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ═══ Footer ═══ -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Gridlock Hackathon 2.0 — Round 2 Prototype Phase</p>
+            <p class="footer-sub">Built for Bengaluru Traffic Police (ASTraM) • Flipkart • MapMyIndia</p>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- App JS -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
