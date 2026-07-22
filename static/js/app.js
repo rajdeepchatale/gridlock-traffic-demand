@@ -1806,13 +1806,13 @@ function build3DTwoWayVehiclesAndBikes() {
             const bike = makeBike(bikeMats[i % bikeMats.length]);
             bike.position.set(laneX, 0, zPos);
             bike.rotation.y = isNorthbound ? 0 : Math.PI;
-            bike.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.2 + Math.random() * 0.05 };
+            bike.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.14 };
             bikesGroup.add(bike);
         } else {
             const car = makeCar(carMats[i % carMats.length], 'z');
             car.position.set(laneX, 0, zPos);
             car.rotation.y = isNorthbound ? 0 : Math.PI;
-            car.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.12 + Math.random() * 0.06 };
+            car.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.10 + Math.random() * 0.02 };
             carsGroup.add(car);
         }
     }
@@ -1827,13 +1827,13 @@ function build3DTwoWayVehiclesAndBikes() {
             const bike = makeBike(bikeMats[i % bikeMats.length]);
             bike.position.set(xPos, 0, laneZ);
             bike.rotation.y = isEastbound ? -Math.PI / 2 : Math.PI / 2;
-            bike.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.22 + Math.random() * 0.05 };
+            bike.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.14 };
             bikesGroup.add(bike);
         } else {
             const car = makeCar(carMats[i % carMats.length], 'x');
             car.position.set(xPos, 0, laneZ);
             car.rotation.y = isEastbound ? 0 : Math.PI;
-            car.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.12 + Math.random() * 0.06 };
+            car.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.10 + Math.random() * 0.02 };
             carsGroup.add(car);
         }
     }
@@ -1847,7 +1847,7 @@ function build3DTwoWayVehiclesAndBikes() {
         const car = makeCar(carMats[i % carMats.length], 'x');
         car.position.set(xPos, 0, laneZ);
         car.rotation.y = isEastbound ? 0 : Math.PI;
-        car.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.14 + Math.random() * 0.04 };
+        car.userData = { roadAxis: 'x', isEastbound, laneZ, speed: 0.10 + Math.random() * 0.02 };
         carsGroup.add(car);
     }
 
@@ -1860,7 +1860,7 @@ function build3DTwoWayVehiclesAndBikes() {
         const car = makeCar(carMats[i % carMats.length], 'z');
         car.position.set(laneX, 0, zPos);
         car.rotation.y = isNorthbound ? 0 : Math.PI;
-        car.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.14 + Math.random() * 0.04 };
+        car.userData = { roadAxis: 'z', isNorthbound, laneX, speed: 0.10 + Math.random() * 0.02 };
         carsGroup.add(car);
     }
 
@@ -1877,9 +1877,9 @@ function build3DTwoWayVehiclesAndBikes() {
         bLight2.position.set(1, 1.2, -3.1);
         jamCar.add(bLight2);
 
-        // Queue BEHIND barricade: z = 35 down to z = 5 (northbound lane x=54)
-        jamCar.position.set(54, 0, 35 - j * 7);
-        jamCar.userData = { isStuck: true };
+        // Queue BEHIND barricade: z = 35 down to z = -7 (northbound lane x=54)
+        jamCar.position.set(54, 0, 35 - j * 9);
+        jamCar.userData = { isStuck: true, roadAxis: 'z', isNorthbound: true, laneX: 54 };
         carsGroup.add(jamCar);
     }
 
@@ -1895,10 +1895,10 @@ function build3DTwoWayVehiclesAndBikes() {
         bL2.position.set(-3.1, 1.2, 1);
         jamCar.add(bL2);
 
-        // Queue eastward from x=66 (clear of junction box x: 38-62)
-        jamCar.position.set(66 + j * 8, 0, 46);
+        // Queue eastward from x=68 (clear of junction box x: 38-62)
+        jamCar.position.set(68 + j * 10, 0, 46);
         jamCar.rotation.y = Math.PI;
-        jamCar.userData = { isStuck: true };
+        jamCar.userData = { isStuck: true, roadAxis: 'x', isEastbound: false, laneZ: 46 };
         carsGroup.add(jamCar);
     }
 }
@@ -2010,44 +2010,38 @@ function animate3DScene() {
     }
 
     // ──── Following-distance helper ────
-    // Collects all vehicles (cars + bikes) into lane groups for proximity checks
+    // Checks all vehicles (cars + bikes + jam) for same-lane proximity ahead
     function getVehicleAhead(vehicle, allVehicles) {
         const ud = vehicle.userData;
-        if (!ud || !ud.roadAxis) return null;
+        if (!ud || !ud.roadAxis) return false;
 
-        const MIN_GAP = 8; // minimum following distance
-
-        let closestDist = Infinity;
+        const MIN_GAP = 12; // minimum following distance (car length ~6 + buffer)
 
         for (let i = 0; i < allVehicles.length; i++) {
             const other = allVehicles[i];
             if (other === vehicle) continue;
-            const oud = other.userData;
-            if (!oud) continue;
 
-            if (ud.roadAxis === 'z' && oud.roadAxis === 'z') {
-                // Same lane check (same laneX)
-                if (Math.abs((ud.laneX || vehicle.position.x) - (oud.laneX || other.position.x)) > 4) continue;
+            // Check proximity based on POSITION regardless of other vehicle's metadata
+            // This ensures jam cars (isStuck) and any vehicle on the lane are detected
+            if (ud.roadAxis === 'z') {
+                // Is 'other' on the same vertical lane? (within 4 units of our laneX)
+                if (Math.abs(vehicle.position.x - other.position.x) > 4) continue;
 
                 const dz = other.position.z - vehicle.position.z;
-                if (ud.isNorthbound && dz > 0 && dz < MIN_GAP) {
-                    closestDist = Math.min(closestDist, dz);
-                } else if (!ud.isNorthbound && dz < 0 && -dz < MIN_GAP) {
-                    closestDist = Math.min(closestDist, -dz);
-                }
-            } else if (ud.roadAxis === 'x' && oud.roadAxis === 'x') {
-                if (Math.abs((ud.laneZ || vehicle.position.z) - (oud.laneZ || other.position.z)) > 4) continue;
+                if (ud.isNorthbound && dz > 0 && dz < MIN_GAP) return true;
+                if (!ud.isNorthbound && dz < 0 && -dz < MIN_GAP) return true;
+
+            } else if (ud.roadAxis === 'x') {
+                // Is 'other' on the same horizontal lane? (within 4 units of our laneZ)
+                if (Math.abs(vehicle.position.z - other.position.z) > 4) continue;
 
                 const dx = other.position.x - vehicle.position.x;
-                if (ud.isEastbound && dx > 0 && dx < MIN_GAP) {
-                    closestDist = Math.min(closestDist, dx);
-                } else if (!ud.isEastbound && dx < 0 && -dx < MIN_GAP) {
-                    closestDist = Math.min(closestDist, -dx);
-                }
+                if (ud.isEastbound && dx > 0 && dx < MIN_GAP) return true;
+                if (!ud.isEastbound && dx < 0 && -dx < MIN_GAP) return true;
             }
         }
 
-        return closestDist < MIN_GAP;
+        return false;
     }
 
     // Build combined vehicle list once per frame
