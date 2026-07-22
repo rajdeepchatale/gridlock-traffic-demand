@@ -154,6 +154,34 @@ function initViews() {
             switchView(btn.dataset.view);
         });
     });
+
+    // 3D tab is only available for stadium venues that have a tactical model
+    const venueSelect = document.getElementById('venueSelect');
+    if (venueSelect) {
+        venueSelect.addEventListener('change', onVenueChange);
+        update3DTabVisibility();
+    }
+}
+
+// Stadium venues that support 3D tactical view
+const STADIUM_VENUES = ['chinnaswamy', 'kanteerava'];
+
+function update3DTabVisibility() {
+    const venueSelect = document.getElementById('venueSelect');
+    const btn3D = document.getElementById('viewBtn3D');
+    if (!venueSelect || !btn3D) return;
+
+    const isStadium = STADIUM_VENUES.includes(venueSelect.value);
+    btn3D.style.display = isStadium ? '' : 'none';
+
+    // If currently on 3D view and venue changed to non-stadium, fall back to map
+    if (!isStadium && activeView === '3d') {
+        switchView('map');
+    }
+}
+
+function onVenueChange() {
+    update3DTabVisibility();
 }
 
 function switchView(viewName) {
@@ -188,7 +216,11 @@ function initKeyboardShortcuts() {
             case 'm': switchView('map'); break;
             case 'a': switchView('analytics'); break;
             case 'o': switchView('operations'); break;
-            case '3': switchView('3d'); break;
+            case '3':
+                if (STADIUM_VENUES.includes(document.getElementById('venueSelect')?.value)) {
+                    switchView('3d');
+                }
+                break;
             case 'h': toggleHistorySidebar(); break;
             case 'escape':
                 closeSpotlight();
