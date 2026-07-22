@@ -1134,9 +1134,11 @@ body {
 }
 
 .hud-dot.stadium { background: var(--khaki); }
-.hud-dot.gate { background: #42A5F5; }
-.hud-dot.crowd { background: #FFB74D; }
+.hud-dot.bus { background: #D32F2F; }
+.hud-dot.crowd { background: #FBC02D; }
 .hud-dot.police { background: #AB47BC; }
+.hud-dot.traffic { background: #42A5F5; }
+.hud-dot.trees { background: #2E7D32; }
 .hud-dot.critical { background: var(--sev-critical); }
 
 /* ══════════════════════════════════════

@@ -27,11 +27,16 @@ let camera3D = null;
 let renderer3D = null;
 let controls3D = null;
 let scene3DInitialized = false;
+
 let trafficParticlesGroup = null;
 let crowdParticlesGroup = null;
 let carsGroup = null;
+let bikesGroup = null;
+let busesGroup = null;
 let constablesGroup = null;
+let barricadesGroup = null;
 let junctionBeaconsGroup = null;
+
 let showParticles3D = true;
 let showBeacons3D = true;
 let animationFrameId3D = null;
@@ -1129,7 +1134,9 @@ function renderWhatsApp(data) {
     `;
 }
 
+// ══════════════════════════════════════
 // Three.js 3D Tactical Scene Engine
+// ══════════════════════════════════════
 function init3DTacticalScene() {
     const container = document.getElementById('tactical3DCanvas');
     if (!container || typeof THREE === 'undefined') return;
@@ -1174,21 +1181,31 @@ function init3DTacticalScene() {
     build3DGround();
     build3DChinnaswamyStadiumWithSign();
     build3DRoadsAndArchitecturalGrid();
+    build3DTreesAndLandscaping();
+    build3DPotholes();
+    build3DTeamBuses();
+    build3DPoliceBarricades();
 
     trafficParticlesGroup = new THREE.Group();
     crowdParticlesGroup = new THREE.Group();
     carsGroup = new THREE.Group();
+    bikesGroup = new THREE.Group();
+    busesGroup = new THREE.Group();
     constablesGroup = new THREE.Group();
+    barricadesGroup = new THREE.Group();
     junctionBeaconsGroup = new THREE.Group();
 
     scene3D.add(trafficParticlesGroup);
     scene3D.add(crowdParticlesGroup);
     scene3D.add(carsGroup);
+    scene3D.add(bikesGroup);
+    scene3D.add(busesGroup);
     scene3D.add(constablesGroup);
+    scene3D.add(barricadesGroup);
     scene3D.add(junctionBeaconsGroup);
 
-    build3DPedestrianCrowd();
-    build3DAnimatedCars();
+    build3DFansAndCrowd();
+    build3DTwoWayVehiclesAndBikes();
     build3DPoliceConstables();
 
     if (currentResult) {
@@ -1321,7 +1338,7 @@ function build3DChinnaswamyStadiumWithSign() {
     scene3D.add(stadiumGroup);
 }
 
-// Architectural Urban Grid — Zero Road/Stadium Overlaps
+// Architectural Urban Grid
 function build3DRoadsAndArchitecturalGrid() {
     const roadMat = new THREE.MeshBasicMaterial({ color: 0x262a36 });
 
@@ -1357,47 +1374,34 @@ function build3DRoadsAndArchitecturalGrid() {
         new THREE.MeshPhongMaterial({ color: 0x1a212d, flatShading: true })
     ];
 
-    // Helper to check if a proposed building box overlaps roads or stadium
     function isRoadOrStadiumOverlap(bx, bz, bw, bd) {
-        const halfW = bw / 2 + 5; // 5 unit setback margin
+        const halfW = bw / 2 + 5;
         const halfD = bd / 2 + 5;
 
-        // Stadium exclusion zone (radius 55 around origin)
         const maxDist = Math.sqrt(bx * bx + bz * bz) + Math.sqrt(halfW * halfW + halfD * halfD);
         if (maxDist < 58) return true;
 
-        // Check road zones with safety buffer
-        if (bx + halfW >= 38 && bx - halfW <= 62) return true; // x = 50 road
-        if (bx + halfW >= -68 && bx - halfW <= -52) return true; // x = -60 road
-        if (bz + halfD >= 38 && bz - halfD <= 62) return true; // z = 50 road
-        if (bz + halfD >= -68 && bz - halfD <= -52) return true; // z = -60 road
+        if (bx + halfW >= 38 && bx - halfW <= 62) return true;
+        if (bx + halfW >= -68 && bx - halfW <= -52) return true;
+        if (bz + halfD >= 38 && bz - halfD <= 62) return true;
+        if (bz + halfD >= -68 && bz - halfD <= -52) return true;
 
         return false;
     }
 
-    // Grid blocks for building placement
     const blocks = [
-        // North-West Block
         { xMin: -190, xMax: -75, zMin: -190, zMax: -75 },
-        // North-Center Block
         { xMin: -45, xMax: 35, zMin: -190, zMax: -75 },
-        // North-East Block
         { xMin: 68, xMax: 190, zMin: -190, zMax: -75 },
-        // West Block
         { xMin: -190, xMax: -75, zMin: -45, zMax: 35 },
-        // East Block
         { xMin: 68, xMax: 190, zMin: -45, zMax: 35 },
-        // South-West Block
         { xMin: -190, xMax: -75, zMin: 68, zMax: 190 },
-        // South-Center Block
         { xMin: -45, xMax: 35, zMin: 68, zMax: 190 },
-        // South-East Block
         { xMin: 68, xMax: 190, zMin: 68, zMax: 190 }
     ];
 
     blocks.forEach(block => {
-        const count = 5;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < 5; i++) {
             const w = 12 + Math.random() * 16;
             const d = 12 + Math.random() * 16;
             const h = 16 + Math.random() * 38;
@@ -1412,7 +1416,6 @@ function build3DRoadsAndArchitecturalGrid() {
                 building.position.set(bx, h / 2, bz);
                 scene3D.add(building);
 
-                // Add roof accent cap for tall buildings
                 if (h > 30) {
                     const capGeo = new THREE.BoxGeometry(w * 0.7, 3, d * 0.7);
                     const capMat = new THREE.MeshPhongMaterial({ color: 0xc4a265 });
@@ -1425,71 +1428,264 @@ function build3DRoadsAndArchitecturalGrid() {
     });
 }
 
-function build3DPedestrianCrowd() {
-    const count = 180;
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
+// 🌳 Cubbon Park Trees & Landscaping
+function build3DTreesAndLandscaping() {
+    const treeGroup = new THREE.Group();
+    const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+    const foliageMat1 = new THREE.MeshPhongMaterial({ color: 0x2e7d32, flatShading: true });
+    const foliageMat2 = new THREE.MeshPhongMaterial({ color: 0x1b5e20, flatShading: true });
 
-    for (let i = 0; i < count; i++) {
+    // Cubbon Park perimeter trees (West & South of Stadium)
+    for (let i = 0; i < 40; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 36 + Math.random() * 18;
-        positions[i * 3] = Math.cos(angle) * dist;
-        positions[i * 3 + 1] = 1.2;
-        positions[i * 3 + 2] = Math.sin(angle) * dist;
+        const dist = 42 + Math.random() * 12;
+        const tx = Math.cos(angle) * dist;
+        const tz = Math.sin(angle) * dist;
 
-        colors[i * 3] = 0.98;
-        colors[i * 3 + 1] = 0.72;
-        colors[i * 3 + 2] = 0.30;
+        // Skip if on roads
+        if (Math.abs(tx - 50) < 12 || Math.abs(tx + 60) < 10 || Math.abs(tz - 50) < 12 || Math.abs(tz + 60) < 10) continue;
+
+        const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 5, 8);
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.set(tx, 2.5, tz);
+        treeGroup.add(trunk);
+
+        const folMat = i % 2 === 0 ? foliageMat1 : foliageMat2;
+        const folGeo = new THREE.SphereGeometry(3.5, 8, 8);
+        const foliage = new THREE.Mesh(folGeo, folMat);
+        foliage.position.set(tx, 6.5, tz);
+        treeGroup.add(foliage);
     }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-        size: 3.8,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.95,
-    });
-
-    const crowd = new THREE.Points(geometry, material);
-    crowdParticlesGroup.add(crowd);
+    scene3D.add(treeGroup);
 }
 
-function build3DAnimatedCars() {
+// 🕳️ Bengaluru Potholes on Bottleneck Junctions
+function build3DPotholes() {
+    const potholeMat = new THREE.MeshBasicMaterial({ color: 0x050505, side: THREE.DoubleSide });
+
+    const locations = [
+        { x: 50, z: 42 }, { x: 54, z: -55 }, { x: -55, z: 48 }, { x: 48, z: 54 }
+    ];
+
+    locations.forEach(loc => {
+        const holeGeo = new THREE.RingGeometry(0.8, 3.2, 16);
+        const hole = new THREE.Mesh(holeGeo, potholeMat);
+        hole.rotation.x = -Math.PI / 2;
+        hole.position.set(loc.x, 0.2, loc.z);
+        scene3D.add(hole);
+    });
+}
+
+// 🚌 RCB & CSK IPL Team Luxury Buses
+function build3DTeamBuses() {
+    // 1. RCB Team Bus (Red & Gold) near Gate 12 VIP Entrance (x: -42, z: 0)
+    const rcbBus = new THREE.Group();
+    const rcbMat = new THREE.MeshPhongMaterial({ color: 0xd32f2f }); // RCB Red
+    const goldMat = new THREE.MeshPhongMaterial({ color: 0xffd700 });
+    const darkMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+
+    const bodyGeo = new THREE.BoxGeometry(4.5, 3.2, 14);
+    const body = new THREE.Mesh(bodyGeo, rcbMat);
+    body.position.y = 2.2;
+    rcbBus.add(body);
+
+    const stripeGeo = new THREE.BoxGeometry(4.6, 0.6, 14.1);
+    const stripe = new THREE.Mesh(stripeGeo, goldMat);
+    stripe.position.y = 2.2;
+    rcbBus.add(stripe);
+
+    const winGeo = new THREE.BoxGeometry(4.7, 1.2, 11);
+    const win = new THREE.Mesh(winGeo, darkMat);
+    win.position.y = 2.8;
+    rcbBus.add(win);
+
+    rcbBus.position.set(-42, 0, 8);
+    rcbBus.rotation.y = Math.PI / 6;
+    scene3D.add(rcbBus);
+
+    // 2. CSK Team Bus (Canary Yellow) near Gate 1 Main Entrance (x: 42, z: 0)
+    const cskBus = new THREE.Group();
+    const cskMat = new THREE.MeshPhongMaterial({ color: 0xfbc02d }); // CSK Yellow
+
+    const cBody = new THREE.Mesh(bodyGeo, cskMat);
+    cBody.position.y = 2.2;
+    cskBus.add(cBody);
+
+    const cWin = new THREE.Mesh(winGeo, darkMat);
+    cWin.position.y = 2.8;
+    cskBus.add(cWin);
+
+    cskBus.position.set(42, 0, -8);
+    cskBus.rotation.y = -Math.PI / 4;
+    scene3D.add(cskBus);
+}
+
+// 🚧 High Security Police Barricades
+function build3DPoliceBarricades() {
+    const barMat = new THREE.MeshPhongMaterial({ color: 0xfbc02d }); // Police Yellow
+    const stripeMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+
+    const gates = [
+        { x: 38, z: 0, rot: Math.PI / 2 },
+        { x: -38, z: 0, rot: Math.PI / 2 },
+        { x: 0, z: 38, rot: 0 },
+        { x: 0, z: -38, rot: 0 },
+        { x: 50, z: 38, rot: 0 } // MG Rd Junction checkpoint
+    ];
+
+    gates.forEach(g => {
+        const barGroup = new THREE.Group();
+
+        const barGeo = new THREE.BoxGeometry(8, 2.5, 0.8);
+        const bar = new THREE.Mesh(barGeo, barMat);
+        bar.position.y = 1.8;
+        barGroup.add(bar);
+
+        const stripeGeo = new THREE.BoxGeometry(2, 2.6, 0.9);
+        const st1 = new THREE.Mesh(stripeGeo, stripeMat);
+        st1.position.set(-2, 1.8, 0);
+        barGroup.add(st1);
+
+        const st2 = new THREE.Mesh(stripeGeo, stripeMat);
+        st2.position.set(2, 1.8, 0);
+        barGroup.add(st2);
+
+        barGroup.position.set(g.x, 0, g.z);
+        barGroup.rotation.y = g.rot;
+        barricadesGroup.add(barGroup);
+    });
+}
+
+// 👥 RCB & CSK Fans (Strictly on Sidewalks / Gate Plazas)
+function build3DFansAndCrowd() {
+    const rcbJerseyMat = new THREE.MeshPhongMaterial({ color: 0xd32f2f }); // RCB Red
+    const cskJerseyMat = new THREE.MeshPhongMaterial({ color: 0xfbc02d }); // CSK Yellow
+    const skinMat = new THREE.MeshPhongMaterial({ color: 0xd4b275 });
+    const pantsMat = new THREE.MeshPhongMaterial({ color: 0x1f2430 });
+
+    const fanCount = 120;
+
+    for (let i = 0; i < fanCount; i++) {
+        const fanGroup = new THREE.Group();
+        const jerseyMat = i % 2 === 0 ? rcbJerseyMat : cskJerseyMat;
+
+        // Torso
+        const torsoGeo = new THREE.CylinderGeometry(0.6, 0.7, 2.2, 8);
+        const torso = new THREE.Mesh(torsoGeo, jerseyMat);
+        torso.position.y = 2.1;
+        fanGroup.add(torso);
+
+        // Legs
+        const legsGeo = new THREE.CylinderGeometry(0.6, 0.5, 2, 8);
+        const legs = new THREE.Mesh(legsGeo, pantsMat);
+        legs.position.y = 1;
+        fanGroup.add(legs);
+
+        // Head
+        const headGeo = new THREE.SphereGeometry(0.6, 10, 10);
+        const head = new THREE.Mesh(headGeo, skinMat);
+        head.position.y = 3.5;
+        fanGroup.add(head);
+
+        // Position strictly on gate plazas (radius 36 to 42, avoiding roads)
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 37 + Math.random() * 6;
+        let fx = Math.cos(angle) * dist;
+        let fz = Math.sin(angle) * dist;
+
+        // Skip if position falls inside road lanes
+        if (Math.abs(fx - 50) < 12 || Math.abs(fx + 60) < 10 || Math.abs(fz - 50) < 12 || Math.abs(fz + 60) < 10) continue;
+
+        fanGroup.position.set(fx, 0, fz);
+        crowdParticlesGroup.add(fanGroup);
+    }
+}
+
+// 🚘 Two-Way Road Traffic (Cars & Scooters/Bikes)
+function build3DTwoWayVehiclesAndBikes() {
     const carMatRed = new THREE.MeshPhongMaterial({ color: 0xe84040 });
     const carMatWhite = new THREE.MeshPhongMaterial({ color: 0xf0eef4 });
     const carMatBlue = new THREE.MeshPhongMaterial({ color: 0x42A5F5 });
+    const bikeMatYellow = new THREE.MeshPhongMaterial({ color: 0xfbc02d });
+    const bikeMatBlack = new THREE.MeshPhongMaterial({ color: 0x111111 });
 
-    // Cars on Cubbon Road (x = 50, right lane x = 54, left lane x = 46)
-    for (let i = 0; i < 12; i++) {
+    // 1. Cubbon Road Traffic (x = 50, Northbound lane x = 54, Southbound lane x = 46)
+    for (let i = 0; i < 14; i++) {
+        const isNorthbound = i % 2 === 0;
+        const laneX = isNorthbound ? 54 : 46;
+        const zPos = (i - 7) * 28;
+
+        if (i % 3 === 0) {
+            // Scooter / Bike
+            const bikeGroup = new THREE.Group();
+            const bBodyGeo = new THREE.BoxGeometry(1.2, 1, 3);
+            const bBody = new THREE.Mesh(bBodyGeo, bikeMatYellow);
+            bBody.position.y = 0.8;
+            bikeGroup.add(bBody);
+
+            const riderHeadGeo = new THREE.SphereGeometry(0.5, 8, 8);
+            const riderHead = new THREE.Mesh(riderHeadGeo, bikeMatBlack);
+            riderHead.position.set(0, 2.2, 0);
+            bikeGroup.add(riderHead);
+
+            bikeGroup.position.set(laneX, 0, zPos);
+            bikeGroup.rotation.y = isNorthbound ? 0 : Math.PI;
+            bikesGroup.add(bikeGroup);
+        } else {
+            // Car
+            const carGroup = new THREE.Group();
+            const mat = i % 2 === 0 ? carMatRed : carMatWhite;
+
+            const bodyGeo = new THREE.BoxGeometry(3.2, 1.4, 6);
+            const body = new THREE.Mesh(bodyGeo, mat);
+            body.position.y = 1;
+            carGroup.add(body);
+
+            const cabinGeo = new THREE.BoxGeometry(2.6, 1.2, 3);
+            const cabinMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 2.1, -0.2);
+            carGroup.add(cabin);
+
+            carGroup.position.set(laneX, 0, zPos);
+            carGroup.rotation.y = isNorthbound ? 0 : Math.PI;
+            carsGroup.add(carGroup);
+        }
+    }
+
+    // 2. MG Road Traffic (z = 50, Eastbound lane z = 54, Westbound lane z = 46)
+    for (let i = 0; i < 14; i++) {
+        const isEastbound = i % 2 === 0;
+        const laneZ = isEastbound ? 54 : 46;
+        const xPos = (i - 7) * 28;
+
         const carGroup = new THREE.Group();
-        const mat = i % 3 === 0 ? carMatRed : i % 3 === 1 ? carMatWhite : carMatBlue;
+        const mat = i % 2 === 0 ? carMatBlue : carMatWhite;
 
-        const bodyGeo = new THREE.BoxGeometry(3.2, 1.4, 6);
+        const bodyGeo = new THREE.BoxGeometry(6, 1.4, 3.2);
         const body = new THREE.Mesh(bodyGeo, mat);
         body.position.y = 1;
         carGroup.add(body);
 
-        const cabinGeo = new THREE.BoxGeometry(2.6, 1.2, 3);
+        const cabinGeo = new THREE.BoxGeometry(3, 1.2, 2.6);
         const cabinMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
         const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-        cabin.position.set(0, 2.1, -0.2);
+        cabin.position.set(-0.2, 2.1, 0);
         carGroup.add(cabin);
 
-        const laneX = i % 2 === 0 ? 54 : 46;
-        carGroup.position.set(laneX, 0, (i - 6) * 30);
+        carGroup.position.set(xPos, 0, laneZ);
+        carGroup.rotation.y = isEastbound ? 0 : Math.PI;
         carsGroup.add(carGroup);
     }
 }
 
+// 👮 Police Constables Standing Behind Barricades
 function build3DPoliceConstables() {
     const policeMat = new THREE.MeshPhongMaterial({ color: 0xAB47BC });
     const capMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
 
     const pos = [
-        { x: 50, z: 50 }, { x: 50, z: -60 }, { x: -60, z: 50 }, { x: 0, z: 42 }, { x: 42, z: 0 }
+        { x: 38, z: 3 }, { x: -38, z: 3 }, { x: 3, z: 38 }, { x: 3, z: -38 }, { x: 50, z: 42 }
     ];
 
     pos.forEach(p => {
@@ -1561,22 +1757,40 @@ function animate3DScene() {
 
     if (controls3D) controls3D.update();
 
+    // Move cars and bikes in two-way traffic lanes
     if (carsGroup && showParticles3D) {
-        carsGroup.children.forEach((car, idx) => {
-            car.position.z += (idx % 2 === 0 ? 0.7 : -0.7);
-            if (car.position.z > 220) car.position.z = -220;
-            if (car.position.z < -220) car.position.z = 220;
+        carsGroup.children.forEach(car => {
+            const isZAxis = car.position.x > 35; // Cubbon Road traffic
+            if (isZAxis) {
+                const isNorthbound = car.position.x > 50;
+                car.position.z += (isNorthbound ? 0.7 : -0.7);
+                if (car.position.z > 220) car.position.z = -220;
+                if (car.position.z < -220) car.position.z = 220;
+            } else {
+                const isEastbound = car.position.z > 50;
+                car.position.x += (isEastbound ? 0.7 : -0.7);
+                if (car.position.x > 220) car.position.x = -220;
+                if (car.position.x < -220) car.position.x = 220;
+            }
         });
     }
 
+    if (bikesGroup && showParticles3D) {
+        bikesGroup.children.forEach(bike => {
+            const isNorthbound = bike.position.x > 50;
+            bike.position.z += (isNorthbound ? 0.9 : -0.9);
+            if (bike.position.z > 220) bike.position.z = -220;
+            if (bike.position.z < -220) bike.position.z = 220;
+        });
+    }
+
+    // Gentle waving animation for fan crowd
     if (crowdParticlesGroup && showParticles3D) {
-        const pos = crowdParticlesGroup.children[0]?.geometry.attributes.position.array;
-        if (pos) {
-            for (let i = 0; i < pos.length / 3; i++) {
-                pos[i * 3 + 1] = 1.2 + Math.sin(Date.now() * 0.005 + i) * 0.4;
+        crowdParticlesGroup.children.forEach((fan, idx) => {
+            if (fan.position) {
+                fan.position.y = Math.sin(Date.now() * 0.006 + idx) * 0.3;
             }
-            crowdParticlesGroup.children[0].geometry.attributes.position.needsUpdate = true;
-        }
+        });
     }
 
     if (junctionBeaconsGroup && showBeacons3D) {
@@ -1611,6 +1825,7 @@ function reset3DCamera() {
 function toggle3DTrafficParticles() {
     showParticles3D = !showParticles3D;
     if (carsGroup) carsGroup.visible = showParticles3D;
+    if (bikesGroup) bikesGroup.visible = showParticles3D;
     if (crowdParticlesGroup) crowdParticlesGroup.visible = showParticles3D;
 }
 
