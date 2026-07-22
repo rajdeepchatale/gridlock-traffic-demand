@@ -731,7 +731,16 @@ function handleJunctionCellClick(name) {
 function renderSummary(data) {
     const event = data.impact.event;
     const summary = data.impact.impact_summary;
+    const seasonality = data.impact.seasonality;
     const grid = document.getElementById('summaryGrid');
+
+    const bannerEl = document.getElementById('seasonalityBanner');
+    if (bannerEl && seasonality && seasonality.notes && seasonality.notes.length > 0) {
+        bannerEl.style.display = 'flex';
+        bannerEl.innerHTML = seasonality.notes.map(n => `<div class="seasonality-note">${n}</div>`).join('');
+    } else if (bannerEl) {
+        bannerEl.style.display = 'none';
+    }
 
     grid.innerHTML = `
         <div class="summary-card blue"><span class="card-accent"></span>
