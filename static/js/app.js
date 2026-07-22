@@ -163,8 +163,8 @@ function initViews() {
     }
 }
 
-// Stadium venues that support 3D tactical view
-const STADIUM_VENUES = ['chinnaswamy', 'kanteerava'];
+// Venues supporting 3D spatial tactical model (M. Chinnaswamy Stadium)
+const STADIUM_VENUES = ['chinnaswamy'];
 
 function update3DTabVisibility() {
     const venueSelect = document.getElementById('venueSelect');
@@ -174,7 +174,7 @@ function update3DTabVisibility() {
     const isStadium = STADIUM_VENUES.includes(venueSelect.value);
     btn3D.style.display = isStadium ? '' : 'none';
 
-    // If currently on 3D view and venue changed to non-stadium, fall back to map
+    // If currently on 3D view and venue changed away from Chinnaswamy, fall back to map
     if (!isStadium && activeView === '3d') {
         switchView('map');
     }
