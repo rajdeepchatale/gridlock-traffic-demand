@@ -1178,14 +1178,6 @@ function init3DTacticalScene() {
     pointLight.position.set(0, 60, 0);
     scene3D.add(pointLight);
 
-    build3DGround();
-    build3DChinnaswamyStadiumWithSign();
-    build3DRoadsAndArchitecturalGrid();
-    build3DTreesAndLandscaping();
-    build3DPotholes();
-    build3DTeamBuses();
-    build3DPoliceBarricades();
-
     trafficParticlesGroup = new THREE.Group();
     crowdParticlesGroup = new THREE.Group();
     carsGroup = new THREE.Group();
@@ -1204,6 +1196,13 @@ function init3DTacticalScene() {
     scene3D.add(barricadesGroup);
     scene3D.add(junctionBeaconsGroup);
 
+    build3DGround();
+    build3DChinnaswamyStadiumWithSign();
+    build3DRoadsAndArchitecturalGrid();
+    build3DTreesAndLandscaping();
+    build3DPotholes();
+    build3DTeamBuses();
+    build3DPoliceBarricades();
     build3DFansAndCrowd();
     build3DTwoWayVehiclesAndBikes();
     build3DPoliceConstables();
