@@ -1,8 +1,8 @@
 """
-Gridlock 2.0 — Round 2 Prototype Server
+ASTraM Command Center — Server API Engine
 Event-Driven Congestion Management System for Bengaluru Traffic Police (ASTraM)
 
-Flask API server powering the dashboard and prediction engine.
+Flask API server powering the command dashboard and prediction pipeline.
 """
 
 from flask import Flask, render_template, jsonify, request, send_from_directory
@@ -100,10 +100,8 @@ def api_metadata():
 # Entry Point
 # ────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    import os
     print("=" * 65)
-    print("   GRIDLOCK 2.0 — EVENT-DRIVEN CONGESTION MANAGEMENT SYSTEM")
-    print("   Bengaluru Traffic Police (ASTraM) Prototype")
+    print("   ASTRAM — BENGALURU TRAFFIC POLICE COMMAND SYSTEM")
     print("=" * 65)
     print("→ Starting Command Center production server")
     print("=" * 65)
