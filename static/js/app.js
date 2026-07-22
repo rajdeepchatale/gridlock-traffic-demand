@@ -1864,7 +1864,8 @@ function build3DTwoWayVehiclesAndBikes() {
         carsGroup.add(car);
     }
 
-    // 5. Barricaded Junction Traffic Jam Queue (bumper-to-bumper on Cubbon Rd approaching MG Rd junction)
+    // 5. Barricaded Junction Traffic Jam Queue (bumper-to-bumper BEHIND barricade on Cubbon Rd)
+    // Barricade is at z=38, so jam cars queue southward from z=35 down
     for (let j = 0; j < 6; j++) {
         const jamCar = makeCar(j % 2 === 0 ? carMatRed : carMatBlue, 'z');
 
@@ -1876,13 +1877,14 @@ function build3DTwoWayVehiclesAndBikes() {
         bLight2.position.set(1, 1.2, -3.1);
         jamCar.add(bLight2);
 
-        // Queued behind barricade at z=38 on northbound lane (x=54)
-        jamCar.position.set(54, 0, 14 + j * 5.5);
+        // Queue BEHIND barricade: z = 35 down to z = 5 (northbound lane x=54)
+        jamCar.position.set(54, 0, 35 - j * 7);
         jamCar.userData = { isStuck: true };
         carsGroup.add(jamCar);
     }
 
-    // 6. Jam queue on MG Road approaching Cubbon Rd junction (westbound lane z=46)
+    // 6. Jam queue on MG Road approaching junction (westbound lane z=46)
+    // Junction box ends at x=62, so jam starts at x=65 outward
     for (let j = 0; j < 4; j++) {
         const jamCar = makeCar(j % 2 === 0 ? carMatSilver : carMatRed, 'x');
 
@@ -1893,7 +1895,8 @@ function build3DTwoWayVehiclesAndBikes() {
         bL2.position.set(-3.1, 1.2, 1);
         jamCar.add(bL2);
 
-        jamCar.position.set(60 + j * 6, 0, 46);
+        // Queue eastward from x=66 (clear of junction box x: 38-62)
+        jamCar.position.set(66 + j * 8, 0, 46);
         jamCar.rotation.y = Math.PI;
         jamCar.userData = { isStuck: true };
         carsGroup.add(jamCar);
@@ -1978,57 +1981,118 @@ function animate3DScene() {
 
     if (controls3D) controls3D.update();
 
-    // Barricade positions for stop zones
-    // Barricades at: (38,0), (-38,0), (0,38), (0,-38), (50,38)
-    // Vehicles must decelerate and stop when approaching barricades
+    // ──── Intersection crossing management ────
+    // Cubbon Rd × MG Rd junction box: x ∈ [36, 64], z ∈ [36, 64]
+    // Use a 4-second cycle: first 2s → z-axis (Cubbon Rd) has green, next 2s → x-axis (MG Rd) has green
+    const junctionCycleMs = 4000;
+    const cyclePhase = (Date.now() % junctionCycleMs) / junctionCycleMs;
+    const zAxisHasGreen = cyclePhase < 0.5; // First half: Cubbon Rd goes, second half: MG Rd goes
 
+    // Junction box boundaries
+    const JX_MIN = 36, JX_MAX = 64, JZ_MIN = 36, JZ_MAX = 64;
+
+    function isInJunction(x, z) {
+        return x > JX_MIN && x < JX_MAX && z > JZ_MIN && z < JZ_MAX;
+    }
+
+    // ──── Barricade stop zones ────
     function shouldStopOnZ(z, isNorthbound, laneX) {
-        // Northbound vehicles approaching barricade at z=38 (gate barricade)
         if (isNorthbound && z > 30 && z < 38 && Math.abs(laneX - 50) < 12) return true;
-        // Southbound vehicles approaching barricade at z=-38
         if (!isNorthbound && z < -30 && z > -38) return true;
         return false;
     }
 
     function shouldStopOnX(x, isEastbound, laneZ) {
-        // Eastbound vehicles approaching barricade at x=38
         if (isEastbound && x > 30 && x < 38) return true;
-        // Westbound vehicles approaching barricade at x=-38
         if (!isEastbound && x < -30 && x > -38) return true;
-        // Eastbound on MG Rd approaching Cubbon Rd junction barricade at x=50, z≈38
         if (isEastbound && x > 42 && x < 50 && Math.abs(laneZ - 50) < 12) return true;
         return false;
     }
 
-    // Animate Cars
+    // ──── Following-distance helper ────
+    // Collects all vehicles (cars + bikes) into lane groups for proximity checks
+    function getVehicleAhead(vehicle, allVehicles) {
+        const ud = vehicle.userData;
+        if (!ud || !ud.roadAxis) return null;
+
+        const MIN_GAP = 8; // minimum following distance
+
+        let closestDist = Infinity;
+
+        for (let i = 0; i < allVehicles.length; i++) {
+            const other = allVehicles[i];
+            if (other === vehicle) continue;
+            const oud = other.userData;
+            if (!oud) continue;
+
+            if (ud.roadAxis === 'z' && oud.roadAxis === 'z') {
+                // Same lane check (same laneX)
+                if (Math.abs((ud.laneX || vehicle.position.x) - (oud.laneX || other.position.x)) > 4) continue;
+
+                const dz = other.position.z - vehicle.position.z;
+                if (ud.isNorthbound && dz > 0 && dz < MIN_GAP) {
+                    closestDist = Math.min(closestDist, dz);
+                } else if (!ud.isNorthbound && dz < 0 && -dz < MIN_GAP) {
+                    closestDist = Math.min(closestDist, -dz);
+                }
+            } else if (ud.roadAxis === 'x' && oud.roadAxis === 'x') {
+                if (Math.abs((ud.laneZ || vehicle.position.z) - (oud.laneZ || other.position.z)) > 4) continue;
+
+                const dx = other.position.x - vehicle.position.x;
+                if (ud.isEastbound && dx > 0 && dx < MIN_GAP) {
+                    closestDist = Math.min(closestDist, dx);
+                } else if (!ud.isEastbound && dx < 0 && -dx < MIN_GAP) {
+                    closestDist = Math.min(closestDist, -dx);
+                }
+            }
+        }
+
+        return closestDist < MIN_GAP;
+    }
+
+    // Build combined vehicle list once per frame
+    const allMovingVehicles = [];
+    if (carsGroup) carsGroup.children.forEach(c => allMovingVehicles.push(c));
+    if (bikesGroup) bikesGroup.children.forEach(b => allMovingVehicles.push(b));
+
+    // ──── Animate Cars ────
     if (carsGroup && showParticles3D) {
         carsGroup.children.forEach(car => {
             if (!car.userData || car.userData.isStuck) return;
 
             if (car.userData.roadAxis === 'z') {
-                // Lock to lane
                 car.position.x = car.userData.laneX;
 
-                // Check barricade stop zone
-                if (shouldStopOnZ(car.position.z, car.userData.isNorthbound, car.userData.laneX)) {
-                    return; // Vehicle stopped at barricade
+                // Barricade stop
+                if (shouldStopOnZ(car.position.z, car.userData.isNorthbound, car.userData.laneX)) return;
+
+                // Intersection crossing: z-axis vehicles wait when MG Rd has green
+                const nextZ = car.position.z + (car.userData.isNorthbound ? 1 : -1) * 3;
+                if (!zAxisHasGreen && isInJunction(car.position.x, nextZ) && !isInJunction(car.position.x, car.position.z)) {
+                    return; // Wait at intersection edge
                 }
+
+                // Following distance: don't advance if vehicle ahead is too close
+                if (getVehicleAhead(car, allMovingVehicles)) return;
 
                 const dir = car.userData.isNorthbound ? 1 : -1;
                 car.position.z += dir * car.userData.speed;
 
-                // Wrap around within reasonable bounds
                 if (car.position.z > 200) car.position.z = -200;
                 if (car.position.z < -200) car.position.z = 200;
 
             } else if (car.userData.roadAxis === 'x') {
-                // Lock to lane
                 car.position.z = car.userData.laneZ;
 
-                // Check barricade stop zone
-                if (shouldStopOnX(car.position.x, car.userData.isEastbound, car.userData.laneZ)) {
-                    return; // Vehicle stopped at barricade
+                if (shouldStopOnX(car.position.x, car.userData.isEastbound, car.userData.laneZ)) return;
+
+                // Intersection crossing: x-axis vehicles wait when Cubbon Rd has green
+                const nextX = car.position.x + (car.userData.isEastbound ? 1 : -1) * 3;
+                if (zAxisHasGreen && isInJunction(nextX, car.position.z) && !isInJunction(car.position.x, car.position.z)) {
+                    return;
                 }
+
+                if (getVehicleAhead(car, allMovingVehicles)) return;
 
                 const dir = car.userData.isEastbound ? 1 : -1;
                 car.position.x += dir * car.userData.speed;
@@ -2039,7 +2103,7 @@ function animate3DScene() {
         });
     }
 
-    // Animate Bikes — same lane-lock and barricade logic
+    // ──── Animate Bikes ────
     if (bikesGroup && showParticles3D) {
         bikesGroup.children.forEach(bike => {
             if (!bike.userData) return;
@@ -2047,9 +2111,12 @@ function animate3DScene() {
             if (bike.userData.roadAxis === 'z') {
                 bike.position.x = bike.userData.laneX;
 
-                if (shouldStopOnZ(bike.position.z, bike.userData.isNorthbound, bike.userData.laneX)) {
-                    return;
-                }
+                if (shouldStopOnZ(bike.position.z, bike.userData.isNorthbound, bike.userData.laneX)) return;
+
+                const nextZ = bike.position.z + (bike.userData.isNorthbound ? 1 : -1) * 3;
+                if (!zAxisHasGreen && isInJunction(bike.position.x, nextZ) && !isInJunction(bike.position.x, bike.position.z)) return;
+
+                if (getVehicleAhead(bike, allMovingVehicles)) return;
 
                 const dir = bike.userData.isNorthbound ? 1 : -1;
                 bike.position.z += dir * bike.userData.speed;
@@ -2059,9 +2126,12 @@ function animate3DScene() {
             } else if (bike.userData.roadAxis === 'x') {
                 bike.position.z = bike.userData.laneZ;
 
-                if (shouldStopOnX(bike.position.x, bike.userData.isEastbound, bike.userData.laneZ)) {
-                    return;
-                }
+                if (shouldStopOnX(bike.position.x, bike.userData.isEastbound, bike.userData.laneZ)) return;
+
+                const nextX = bike.position.x + (bike.userData.isEastbound ? 1 : -1) * 3;
+                if (zAxisHasGreen && isInJunction(nextX, bike.position.z) && !isInJunction(bike.position.x, bike.position.z)) return;
+
+                if (getVehicleAhead(bike, allMovingVehicles)) return;
 
                 const dir = bike.userData.isEastbound ? 1 : -1;
                 bike.position.x += dir * bike.userData.speed;
