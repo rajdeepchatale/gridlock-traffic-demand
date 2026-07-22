@@ -155,15 +155,16 @@ function initViews() {
         });
     });
 
-    // 3D tab is only available for stadium venues that have a tactical model
+    // 3D tab is strictly available only for M. Chinnaswamy Stadium
     const venueSelect = document.getElementById('venueSelect');
     if (venueSelect) {
         venueSelect.addEventListener('change', onVenueChange);
+        venueSelect.addEventListener('input', onVenueChange);
         update3DTabVisibility();
     }
 }
 
-// Venues supporting 3D spatial tactical model (M. Chinnaswamy Stadium)
+// Venues supporting 3D spatial tactical model (M. Chinnaswamy Stadium only)
 const STADIUM_VENUES = ['chinnaswamy'];
 
 function update3DTabVisibility() {
@@ -171,11 +172,11 @@ function update3DTabVisibility() {
     const btn3D = document.getElementById('viewBtn3D');
     if (!venueSelect || !btn3D) return;
 
-    const isStadium = STADIUM_VENUES.includes(venueSelect.value);
-    btn3D.style.display = isStadium ? '' : 'none';
+    const isChinnaswamy = (venueSelect.value === 'chinnaswamy');
+    btn3D.style.display = isChinnaswamy ? 'flex' : 'none';
 
     // If currently on 3D view and venue changed away from Chinnaswamy, fall back to map
-    if (!isStadium && activeView === '3d') {
+    if (!isChinnaswamy && activeView === '3d') {
         switchView('map');
     }
 }
