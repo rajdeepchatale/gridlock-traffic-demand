@@ -2,3 +2,8 @@ catboost_info/
 predictions*.csv
 .DS_Store
 __pycache__/
+snapshots/
+*.zip
+*.mp4
+GEMINI.md
+design skill/

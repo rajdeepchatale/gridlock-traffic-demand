@@ -1,99 +1,43 @@
-# Gridlock 2.0 — Event-Driven Congestion Command Center
-### An Operational Decision Support System for Bengaluru Traffic Police (ASTraM) & Flipkart Last-Mile Logistics
+# ASTraM — Bengaluru Traffic Police Command System
+### Event-Driven Congestion Intelligence & Dispatch Engine
 
-⚡ **Live Deployed Prototype**: [gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)
-
-Developed for **Gridlock Hackathon 2.0 — Round 2**. 
+ASTraM Command Center is an operational decision support system built for **Bengaluru Traffic Police (BTP)** to manage large-scale crowd events, IPL cricket matches, rallies, and environmental emergencies.
 
 ---
 
-## 🎯 The Core Problem & Philosophy
-Most hackathon solutions focus on building **passive dashboards** and **predictive heatmaps**. While mathematically interesting, they fail to resolve the real-world operational challenges faced on Bengaluru’s streets. 
+## 🎯 Features & Modules
 
-A Traffic Inspector managing 15 junctions during an IPL match doesn't need to see a heatmap; they need to know **which constable should stand where, at what time, and with what equipment**. A Flipkart logistics manager doesn't just need to know that traffic is slow; they need to know **which delivery SLAs are threatened and how to routing-adjust their last-mile dispatch**.
+### 1. 2D & 3D Interactive Tactical Mapping
+* **2D Spatial Demand Engine**: Dynamic Leaflet map displaying junction impact radiuses, congestion severities, and venue locations across 10 BTP traffic zones.
+* **3D WebGL Tactical Mode (Beta)**: Three.js WebGL model of M. Chinnaswamy Stadium, featuring floating 3D venue signboards, gate entrances (Gate 1, 2, 12, 18), pedestrian crowd swarms, animated traffic vehicles, and on-duty police constable positions.
 
-**Gridlock 2.0 is an active decision-engine.** It builds on the high-precision spatial-temporal traffic demand predictor from Round 1 and translates predictions directly into **actionable deployment orders, last-mile mitigation schedules, and economic ROI metrics**.
+### 2. Automated Special Bandobast Orders
+* Generates official **Bandobast Deployment Orders** specifying exact constable staffing requirements, barricade engineering guidelines (Type-A, Type-B), and signal override timings.
+* Recommends smart traffic diversion routes to reduce commuter delay.
+
+### 3. Constable WhatsApp Dispatch Simulator
+* Formats low-bandwidth, copy-paste ready **WhatsApp Alert Messages** for instant broadcast to division traffic officers.
+* Includes an interactive dispatch simulator with delivery confirmation tags.
+
+### 4. Flipkart Last-Mile Logistics Impact
+* Quantifies last-mile delivery SLA disruptions and financial risk.
+* Assists logistics hubs in pre-positioning delivery fleets before peak congestion windows.
+
+### 5. Economic Cost of Inaction Model
+* Calculates commuter time value, fuel wastage, and emergency response delay costs.
+* Measures environmental impact by modeling excess CO₂ emissions from idling vehicles.
 
 ---
 
-## 🚀 Key Operational Features
+## ⚙️ Quick Start
 
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Launch local server
+python3 app.py
+
+# 3. Access web dashboard
+http://127.0.0.1:5050/
 ```
-                   ┌──────────────────────────────┐
-                   │    Round 1 ML Demand Model   │
-                   └──────────────┬───────────────┘
-                                  │ (Baseline Traffic Load)
-                                  ▼
-                   ┌──────────────────────────────┐
-                   │  Event Impact Propagation    │
-                   └──────────────┬───────────────┘
-                                  │ (Spatial-Temporal Surges)
-                                  ▼
-      ┌───────────────────────────┼───────────────────────────┐
-      ▼                           ▼                           ▼
-┌───────────┐               ┌───────────┐               ┌───────────┐
-│ Bandobast │               │ Flipkart  │               │ Economic  │
-│ Deploy    │               │ Last-Mile │               │ ROI       │
-│ Orders    │               │ Analytics │               │ Summary   │
-└─────┬─────┘               └───────────┘               └───────────┘
-      │
-      ▼
-┌───────────┐
-│ WhatsApp  │
-│ Dispatch  │
-└───────────┘
-```
-
-### 1. Special Bandobast Order Generator
-Converts traffic surge predictions into standard-format **Special Bandobast Orders** ready for Traffic Division deployment.
-* **Manpower Allocation**: Automatically assigns necessary constable staffing counts (above typical baselines) for affected intersections based on computed congestion.
-* **Equipment & Engineering Guidelines**: Recommends specific barricade classifications (e.g., Type-A Standard, Type-B Heavy, or Type-C Full Road Closure) and signal override adjustments (e.g., extend green cycle by 30 seconds on primary dispersal corridors).
-* **Smart Diversion Routes**: Outlines specific rerouting pathways to redirect vehicle surges, saving an estimated 10-20 minutes per commuter.
-
-### 2. Flipkart Last-Mile Logistics Impact Layer
-Designed specifically to protect Flipkart's delivery SLA commitments during major congestion windows.
-* **SLA Disruption Forecast**: Predicts the exact number of delayed packages and identifies impacted delivery zones based on spatial event proximity.
-* **Cost of Delay Mitigation**: Quantifies financial liabilities for last-mile delays and recommends strategic parcel dispatch throttling and hub pre-positioning.
-
-### 3. Economic "Cost of Inaction" Calculator
-Translates traffic delays into hard financial metrics to help BTP justify deployment budgets and municipal investments.
-* **Commuter Time Value**: Computes total person-hours lost based on standard Bengaluru wage statistics.
-* **Resource Optimization**: Compares the economic losses of traffic gridlock (fuel wastage, lost productivity, delayed freight) against the low operational cost of police deployment, calculating the direct ROI of active traffic management.
-* **Environmental Impact**: Models extra metric tons of CO₂ emissions generated by idling vehicles in bottleneck zones.
-
-### 4. Low-Connectivity WhatsApp Dispatcher
-Police constables on-ground do not operate from desktop dashboards. Gridlock 2.0 generates copy-paste ready, lightweight **WhatsApp Alert Messages** that can be dispatched to traffic division channels, detailing duty shifts, assigned junctions, and target instructions.
-
----
-
-## 🗺️ Bengaluru-Specific Event Intelligence
-Gridlock 2.0 does not treat events generically. It contains calibrated spatial-temporal profiles for real Bengaluru venues and scenarios:
-* **M. Chinnaswamy Stadium (IPL/Cricket)**: High evening crowd surges impacting Central Division corridors (MG Road, Brigade Road, Cubbon Park).
-* **Palace Grounds (Large Concerts/Exhibitions)**: North Division bottleneck surges affecting Bellary Road, Hebbal Flyover, and Mekhri Circle.
-* **Freedom Park (Protests & Marches)**: Linear movement corridor blocks impacting Majestic, Seshadri Road, and Anand Rao Circle.
-* **Rain-Induced Flooding**: High-impact weather anomalies causing waterlogging and extreme delays at critical arterial junctions (Silk Board, KR Puram, ORR).
-* **Metro Construction**: Permanent road narrowing bottlenecks where capacity-ratio thresholds are highly sensitive.
-
----
-
-## 📊 Technical Stack & Calibrated Models
-* **Backend Prediction Engine**: Written in Python using optimized BPR (Bureau of Public Roads) congestion curves, calibrated with high-precision mixed-traffic coefficients typical of Indian street systems (incorporating pedestrian friction and signal cycles).
-* **Web Interface**: Lightweight Flask API server hosting a premium, dark-themed command dashboard styled with vanilla CSS glassmorphism.
-* **Mapping**: Powered by Leaflet JS configured with a MapMyIndia-inspired dark tile skin, dynamically plotting venue impact radiuses and glowing junction severity markers (Critical, High, Moderate, Low).
-
----
-
-## ⚙️ Live Access & Usage
-
-### 🚀 Live Web Application (Production)
-The prototype is fully deployed and accessible at:
-👉 **[gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)**
-
-### 📋 How to Use
-1. **Configure the Event**: Select the **Event Type** and **Venue / Location** from the input control panel.
-2. **Execute Prediction**: Click **Generate Prediction & Deployment Order**.
-3. **Analyze Outcomes**: 
-   * View the computed impact footprint and congestion severities on the interactive map.
-   * Review the generated **Special Bandobast Order** with detailed constable shift assignments.
-   * Review the **Flipkart Last-Mile Delivery Impact** cards.
-   * Copy the formatted **WhatsApp Field Alert** for low-connectivity dispatch.
