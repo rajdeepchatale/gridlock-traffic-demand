@@ -1,6 +1,8 @@
 # ASTraM — Bengaluru Traffic Police Command System
 ### Event-Driven Congestion Intelligence & Dispatch Engine
 
+⚡ **Live Production Application**: [gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)
+
 ASTraM Command Center is an operational decision support system built for **Bengaluru Traffic Police (BTP)** to manage large-scale crowd events, IPL cricket matches, rallies, and environmental emergencies.
 
 ---
@@ -29,15 +31,18 @@ ASTraM Command Center is an operational decision support system built for **Beng
 
 ---
 
-## ⚙️ Quick Start
+## ⚙️ Execution & Setup
+
+### 🚀 Live Web Application (Vercel)
+Access the live production system directly at:  
+👉 **[gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app/)**
+
+### 💻 Local Development Setup
 
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Launch local server
+# 2. Start application server
 python3 app.py
-
-# 3. Access web dashboard
-http://127.0.0.1:5050/
 ```
