@@ -1,5 +1,5 @@
 """
-Event Impact Predictor — Gridlock 2.0 Round 2
+Event Impact Predictor — Spatial-Temporal Traffic Demand Engine
 Predicts spatial-temporal traffic impact of events on Bengaluru's road network.
 Uses the junction topology and event type templates to model congestion propagation.
 """

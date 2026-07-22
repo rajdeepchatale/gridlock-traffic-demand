@@ -1,5 +1,5 @@
 """
-Bandobast Order Generator — Gridlock 2.0 Round 2
+Bandobast Order Generator — ASTraM Operations Engine
 Generates actionable deployment orders that BTP Traffic Inspectors
 can directly use for field operations during events.
 """
