@@ -1,5 +1,5 @@
 """
-Economic Cost Analyzer — Gridlock 2.0 Round 2
+Economic Cost Analyzer — Economic Disruption & SLA Impact Model
 Calculates the real-world economic cost of traffic disruption and 
 the ROI of deploying BTP resources. Includes Flipkart delivery impact.
 """
