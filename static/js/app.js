@@ -1136,13 +1136,13 @@ function init3DTacticalScene() {
 
     scene3D = new THREE.Scene();
     scene3D.background = new THREE.Color(0x090b10);
-    scene3D.fog = new THREE.FogExp2(0x090b10, 0.0025);
+    scene3D.fog = new THREE.FogExp2(0x090b10, 0.0022);
 
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 500;
 
     camera3D = new THREE.PerspectiveCamera(45, width / height, 1, 1200);
-    camera3D.position.set(0, 160, 220);
+    camera3D.position.set(0, 170, 230);
 
     renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer3D.setSize(width, height);
@@ -1173,7 +1173,7 @@ function init3DTacticalScene() {
 
     build3DGround();
     build3DChinnaswamyStadiumWithSign();
-    build3DRoadsAndBuildings();
+    build3DRoadsAndArchitecturalGrid();
 
     trafficParticlesGroup = new THREE.Group();
     crowdParticlesGroup = new THREE.Group();
@@ -1321,41 +1321,108 @@ function build3DChinnaswamyStadiumWithSign() {
     scene3D.add(stadiumGroup);
 }
 
-function build3DRoadsAndBuildings() {
+// Architectural Urban Grid — Zero Road/Stadium Overlaps
+function build3DRoadsAndArchitecturalGrid() {
     const roadMat = new THREE.MeshBasicMaterial({ color: 0x262a36 });
 
-    const road1 = new THREE.Mesh(new THREE.PlaneGeometry(18, 400), roadMat);
+    // Road 1: East-West Arterial (MG Road) at z = 50, width = 20 (z: 40 to 60)
+    const road1 = new THREE.Mesh(new THREE.PlaneGeometry(450, 20), roadMat);
     road1.rotation.x = -Math.PI / 2;
-    road1.position.set(50, 0, 0);
+    road1.position.set(0, 0.1, 50);
     scene3D.add(road1);
 
-    const road2 = new THREE.Mesh(new THREE.PlaneGeometry(400, 18), roadMat);
+    // Road 2: North-South Arterial (Cubbon Road) at x = 50, width = 20 (x: 40 to 60)
+    const road2 = new THREE.Mesh(new THREE.PlaneGeometry(20, 450), roadMat);
     road2.rotation.x = -Math.PI / 2;
-    road2.position.set(0, 0, 50);
+    road2.position.set(50, 0.1, 0);
     scene3D.add(road2);
 
-    const road3 = new THREE.Mesh(new THREE.PlaneGeometry(400, 16), roadMat);
+    // Road 3: North Cross Arterial (Infantry Road) at z = -60, width = 16 (z: -68 to -52)
+    const road3 = new THREE.Mesh(new THREE.PlaneGeometry(450, 16), roadMat);
     road3.rotation.x = -Math.PI / 2;
-    road3.position.set(0, 0, -60);
+    road3.position.set(0, 0.1, -60);
     scene3D.add(road3);
 
-    const buildingMat = new THREE.MeshPhongMaterial({ color: 0x181b24, flatShading: true });
+    // Road 4: West Cross Arterial (Kasturba Road) at x = -60, width = 16 (x: -68 to -52)
+    const road4 = new THREE.Mesh(new THREE.PlaneGeometry(16, 450), roadMat);
+    road4.rotation.x = -Math.PI / 2;
+    road4.position.set(-60, 0.1, 0);
+    scene3D.add(road4);
 
-    for (let i = 0; i < 42; i++) {
-        const w = 10 + Math.random() * 14;
-        const d = 10 + Math.random() * 14;
-        const h = 12 + Math.random() * 38;
+    // Architectural Building Palette
+    const bMats = [
+        new THREE.MeshPhongMaterial({ color: 0x181b24, flatShading: true }),
+        new THREE.MeshPhongMaterial({ color: 0x1f2430, flatShading: true }),
+        new THREE.MeshPhongMaterial({ color: 0x252b3b, flatShading: true }),
+        new THREE.MeshPhongMaterial({ color: 0x1a212d, flatShading: true })
+    ];
 
-        let x = (Math.random() - 0.5) * 360;
-        let z = (Math.random() - 0.5) * 360;
+    // Helper to check if a proposed building box overlaps roads or stadium
+    function isRoadOrStadiumOverlap(bx, bz, bw, bd) {
+        const halfW = bw / 2 + 5; // 5 unit setback margin
+        const halfD = bd / 2 + 5;
 
-        if (Math.sqrt(x * x + z * z) < 65) continue;
+        // Stadium exclusion zone (radius 55 around origin)
+        const maxDist = Math.sqrt(bx * bx + bz * bz) + Math.sqrt(halfW * halfW + halfD * halfD);
+        if (maxDist < 58) return true;
 
-        const bGeo = new THREE.BoxGeometry(w, h, d);
-        const building = new THREE.Mesh(bGeo, buildingMat);
-        building.position.set(x, h / 2, z);
-        scene3D.add(building);
+        // Check road zones with safety buffer
+        if (bx + halfW >= 38 && bx - halfW <= 62) return true; // x = 50 road
+        if (bx + halfW >= -68 && bx - halfW <= -52) return true; // x = -60 road
+        if (bz + halfD >= 38 && bz - halfD <= 62) return true; // z = 50 road
+        if (bz + halfD >= -68 && bz - halfD <= -52) return true; // z = -60 road
+
+        return false;
     }
+
+    // Grid blocks for building placement
+    const blocks = [
+        // North-West Block
+        { xMin: -190, xMax: -75, zMin: -190, zMax: -75 },
+        // North-Center Block
+        { xMin: -45, xMax: 35, zMin: -190, zMax: -75 },
+        // North-East Block
+        { xMin: 68, xMax: 190, zMin: -190, zMax: -75 },
+        // West Block
+        { xMin: -190, xMax: -75, zMin: -45, zMax: 35 },
+        // East Block
+        { xMin: 68, xMax: 190, zMin: -45, zMax: 35 },
+        // South-West Block
+        { xMin: -190, xMax: -75, zMin: 68, zMax: 190 },
+        // South-Center Block
+        { xMin: -45, xMax: 35, zMin: 68, zMax: 190 },
+        // South-East Block
+        { xMin: 68, xMax: 190, zMin: 68, zMax: 190 }
+    ];
+
+    blocks.forEach(block => {
+        const count = 5;
+        for (let i = 0; i < count; i++) {
+            const w = 12 + Math.random() * 16;
+            const d = 12 + Math.random() * 16;
+            const h = 16 + Math.random() * 38;
+
+            const bx = block.xMin + Math.random() * (block.xMax - block.xMin);
+            const bz = block.zMin + Math.random() * (block.zMax - block.zMin);
+
+            if (!isRoadOrStadiumOverlap(bx, bz, w, d)) {
+                const bMat = bMats[Math.floor(Math.random() * bMats.length)];
+                const bGeo = new THREE.BoxGeometry(w, h, d);
+                const building = new THREE.Mesh(bGeo, bMat);
+                building.position.set(bx, h / 2, bz);
+                scene3D.add(building);
+
+                // Add roof accent cap for tall buildings
+                if (h > 30) {
+                    const capGeo = new THREE.BoxGeometry(w * 0.7, 3, d * 0.7);
+                    const capMat = new THREE.MeshPhongMaterial({ color: 0xc4a265 });
+                    const cap = new THREE.Mesh(capGeo, capMat);
+                    cap.position.set(bx, h + 1.5, bz);
+                    scene3D.add(cap);
+                }
+            }
+        }
+    });
 }
 
 function build3DPedestrianCrowd() {
@@ -1366,7 +1433,7 @@ function build3DPedestrianCrowd() {
 
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 36 + Math.random() * 20;
+        const dist = 36 + Math.random() * 18;
         positions[i * 3] = Math.cos(angle) * dist;
         positions[i * 3 + 1] = 1.2;
         positions[i * 3 + 2] = Math.sin(angle) * dist;
@@ -1395,22 +1462,24 @@ function build3DAnimatedCars() {
     const carMatWhite = new THREE.MeshPhongMaterial({ color: 0xf0eef4 });
     const carMatBlue = new THREE.MeshPhongMaterial({ color: 0x42A5F5 });
 
-    for (let i = 0; i < 16; i++) {
+    // Cars on Cubbon Road (x = 50, right lane x = 54, left lane x = 46)
+    for (let i = 0; i < 12; i++) {
         const carGroup = new THREE.Group();
         const mat = i % 3 === 0 ? carMatRed : i % 3 === 1 ? carMatWhite : carMatBlue;
 
-        const bodyGeo = new THREE.BoxGeometry(3.5, 1.4, 6);
+        const bodyGeo = new THREE.BoxGeometry(3.2, 1.4, 6);
         const body = new THREE.Mesh(bodyGeo, mat);
         body.position.y = 1;
         carGroup.add(body);
 
-        const cabinGeo = new THREE.BoxGeometry(2.8, 1.2, 3);
+        const cabinGeo = new THREE.BoxGeometry(2.6, 1.2, 3);
         const cabinMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
         const cabin = new THREE.Mesh(cabinGeo, cabinMat);
         cabin.position.set(0, 2.1, -0.2);
         carGroup.add(cabin);
 
-        carGroup.position.set(50 + (i % 2 === 0 ? 3 : -3), 0, (i - 8) * 24);
+        const laneX = i % 2 === 0 ? 54 : 46;
+        carGroup.position.set(laneX, 0, (i - 6) * 30);
         carsGroup.add(carGroup);
     }
 }
@@ -1420,7 +1489,7 @@ function build3DPoliceConstables() {
     const capMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
 
     const pos = [
-        { x: 50, z: 50 }, { x: 50, z: -60 }, { x: -50, z: 50 }, { x: 0, z: 42 }, { x: 42, z: 0 }
+        { x: 50, z: 50 }, { x: 50, z: -60 }, { x: -60, z: 50 }, { x: 0, z: 42 }, { x: 42, z: 0 }
     ];
 
     pos.forEach(p => {
@@ -1494,9 +1563,9 @@ function animate3DScene() {
 
     if (carsGroup && showParticles3D) {
         carsGroup.children.forEach((car, idx) => {
-            car.position.z += (idx % 2 === 0 ? 0.6 : -0.6);
-            if (car.position.z > 200) car.position.z = -200;
-            if (car.position.z < -200) car.position.z = 200;
+            car.position.z += (idx % 2 === 0 ? 0.7 : -0.7);
+            if (car.position.z > 220) car.position.z = -220;
+            if (car.position.z < -220) car.position.z = 220;
         });
     }
 
@@ -1533,7 +1602,7 @@ function on3DWindowResize() {
 
 function reset3DCamera() {
     if (camera3D && controls3D) {
-        camera3D.position.set(0, 160, 220);
+        camera3D.position.set(0, 170, 230);
         controls3D.target.set(0, 0, 0);
         controls3D.update();
     }
