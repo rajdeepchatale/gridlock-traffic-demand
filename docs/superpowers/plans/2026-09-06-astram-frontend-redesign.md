@@ -283,7 +283,7 @@ Create `static/css/tokens.css`. Values are fixed by the spec; do not adjust them
 - [ ] **Step 4: Run the tests and make sure they pass**
 
 Run: `pytest tests/test_design_tokens.py -q`
-Expected: PASS — 53 tests.
+Expected: PASS — 41 tests (12 body + 12 secondary + 16 severity + 1 override).
 
 - [ ] **Step 5: Run the full suite to confirm nothing regressed**
 
@@ -881,8 +881,10 @@ def test_landing_has_every_band(client, band):
 
 def test_landing_explains_the_eight_stage_pipeline(client):
     """The model's depth is the point of the page; the stages must be named."""
-    body = client.get("/").get_data(as_text=True)
-    for stage in ("Seasonality", "Spatial selection", "BPR", "Counterfactual", "Economics"):
+    # Compared case-insensitively: the test verifies each stage is named, and
+    # must not dictate the heading's capitalisation.
+    body = client.get("/").get_data(as_text=True).lower()
+    for stage in ("seasonality", "spatial selection", "bpr", "counterfactual", "economics"):
         assert stage in body, f"pipeline stage '{stage}' is missing"
 
 
