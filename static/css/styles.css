@@ -1197,3 +1197,84 @@ body {
     .spotlight-panel { top: auto; bottom: 16px; right: 16px; left: 16px; width: auto; }
     .whatsapp-phone { width: 100%; }
 }
+
+/* ══════════════════════════════════════
+   INLINE ERROR SURFACE
+   Replaces alert(), which blocks the page and reads as a crash.
+   ══════════════════════════════════════ */
+.error-surface {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: color-mix(in srgb, var(--sev-critical) 12%, var(--surface-1));
+    border: 1px solid var(--sev-critical);
+    border-radius: var(--radius-md);
+}
+
+.error-surface[data-kind="server"] {
+    background: color-mix(in srgb, var(--sev-high) 12%, var(--surface-1));
+    border-color: var(--sev-high);
+}
+
+.error-text {
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-hi);
+}
+
+.error-dismiss {
+    background: none;
+    border: 0;
+    color: var(--text-mid);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 var(--space-1);
+}
+
+.error-dismiss:hover { color: var(--text-hi); }
+
+/* ══════════════════════════════════════
+   EMPTY STATE HINTS
+   ══════════════════════════════════════ */
+.welcome-hints {
+    list-style: none;
+    margin: var(--space-6) auto 0;
+    display: grid;
+    gap: var(--space-2);
+    text-align: left;
+    max-width: 46ch;
+}
+
+.welcome-hints li {
+    font-size: 12px;
+    color: var(--text-lo);
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--accent-dim);
+    line-height: 1.5;
+}
+
+.welcome-hints strong { color: var(--text-mid); font-weight: 600; }
+
+/* ══════════════════════════════════════
+   SKELETON LOADING
+   Marks the panels being filled instead of blanking the page.
+   ══════════════════════════════════════ */
+.skeleton {
+    position: relative;
+    background: linear-gradient(90deg,
+        var(--surface-1) 0%, var(--surface-2) 50%, var(--surface-1) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-sweep 1.2s var(--ease) infinite;
+    border-radius: var(--radius-sm);
+    color: transparent;
+    pointer-events: none;
+}
+
+@keyframes skeleton-sweep {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}

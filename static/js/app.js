@@ -121,6 +121,34 @@ function applyTheme(theme) {
     }
 }
 
+/*
+ * Errors render inline beside the control that caused them. alert() blocks the
+ * page, cannot be styled, and in a control room reads as a crash rather than a
+ * rejected input.
+ */
+function showError(message, kind) {
+    const surface = document.getElementById('errorSurface');
+    const text = document.getElementById('errorText');
+    if (!surface || !text) return;
+    text.textContent = message;
+    surface.dataset.kind = kind || 'client';
+    surface.hidden = false;
+}
+
+function clearError() {
+    const surface = document.getElementById('errorSurface');
+    if (surface) surface.hidden = true;
+}
+
+// Skeletons mark the panels being filled, rather than blanking the whole page
+// behind a spinner for a pipeline that returns in well under a second.
+function setLoading(isLoading) {
+    ['statsGrid', 'zoneList', 'junctionGrid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('skeleton', isLoading);
+    });
+}
+
 // Counter animation
 function animateCounter(el, target, duration = 800, prefix = '', suffix = '') {
     if (!el) return;
@@ -671,7 +699,7 @@ function triggerWhatsAppDispatch() {
     const statusText = document.getElementById('dispatchStatusText');
 
     if (!currentResult) {
-        alert('Please run a prediction first before broadcasting alerts.');
+        showError('Run a prediction before broadcasting a dispatch alert.', 'client');
         return;
     }
 
@@ -698,7 +726,6 @@ function exportReport() {
 // API Call: Prediction Engine
 async function runPrediction() {
     const btn = document.getElementById('predictBtn');
-    const loader = document.getElementById('loadingOverlay');
 
     const payload = {
         event_type: document.getElementById('eventType').value,
@@ -716,7 +743,8 @@ async function runPrediction() {
     }
 
     btn.disabled = true;
-    loader.classList.add('active');
+    clearError();
+    setLoading(true);
 
     try {
         const resp = await fetch('/api/predict', {
@@ -727,7 +755,8 @@ async function runPrediction() {
         const data = await resp.json();
 
         if (!data.success) {
-            alert('Prediction failed: ' + (data.error || 'Unknown error'));
+            showError(data.error || 'The prediction was rejected.',
+                      resp.status >= 500 ? 'server' : 'client');
             return;
         }
 
@@ -742,10 +771,10 @@ async function runPrediction() {
         switchView('map');
 
     } catch (err) {
-        alert('Error connecting to server: ' + err.message);
+        showError('Could not reach the server. Check your connection and try again.', 'server');
     } finally {
         btn.disabled = false;
-        loader.classList.remove('active');
+        setLoading(false);
     }
 }
 

@@ -149,6 +149,10 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                             <span>Run Prediction</span>
                         </button>
+                        <div class="error-surface" id="errorSurface" role="alert" aria-live="polite" hidden>
+                            <span class="error-text" id="errorText"></span>
+                            <button class="error-dismiss" type="button" onclick="clearError()" aria-label="Dismiss error">&times;</button>
+                        </div>
                     </div>
                 </div>
 
@@ -265,10 +269,15 @@
                             <div class="welcome-icon">
                                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                             </div>
-                            <h2>ASTraM Command & Dispatch Center</h2>
-                            <p>Select an event type & venue to analyze junction congestion, dispatch bandobast orders, and inspect 3D tactical models.</p>
+                            <h2>No prediction yet</h2>
+                            <p>Choose an event, a venue and a time, then run a prediction. ASTraM returns which junctions will exceed capacity, a bandobast order with per-junction constable strength, and the cost of doing nothing.</p>
+                            <ul class="welcome-hints">
+                                <li><strong>Event type</strong> sets crowd draw and impact radius</li>
+                                <li><strong>Time</strong> decides the baseline road load it lands on</li>
+                                <li><strong>Date</strong> applies IPL season and monsoon adjustments</li>
+                            </ul>
                             <div class="welcome-stats">
-                                <div class="ws-item"><span class="ws-val">30+</span><span class="ws-lab">Junctions Mapped</span></div>
+                                <div class="ws-item"><span class="ws-val">28</span><span class="ws-lab">Junctions Mapped</span></div>
                                 <div class="ws-item"><span class="ws-val">8</span><span class="ws-lab">Event Types</span></div>
                                 <div class="ws-item"><span class="ws-val">10</span><span class="ws-lab">BTP Zones</span></div>
                                 <div class="ws-item"><span class="ws-val">3D</span><span class="ws-lab">WebGL Tactical View</span></div>

@@ -112,3 +112,47 @@ def test_3d_view_renders_and_resizes(console_page):
     after = canvas.bounding_box()
     assert after["width"] != before["width"], "3D canvas did not resize with its container"
     assert after["height"] > 100
+
+
+def test_a_rejected_prediction_shows_an_inline_error_not_an_alert(console_page):
+    """alert() blocks the page and reads as a crash; errors belong in the layout."""
+    dialogs = []
+    console_page.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
+
+    # 99,000,000 exceeds the server's MAX_CROWD, so validation rejects it.
+    console_page.fill("#expectedCrowd", "99000000")
+    console_page.click("#predictBtn")
+
+    error = console_page.locator("#errorSurface")
+    error.wait_for(state="visible", timeout=5000)
+    assert dialogs == [], f"a blocking dialog was raised: {dialogs}"
+    assert "crowd" in error.inner_text().lower()
+
+
+def test_the_error_clears_on_a_successful_prediction(console_page):
+    console_page.fill("#expectedCrowd", "99000000")
+    console_page.click("#predictBtn")
+    console_page.locator("#errorSurface").wait_for(state="visible", timeout=5000)
+
+    console_page.fill("#expectedCrowd", "34000")
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    assert console_page.locator("#errorSurface").is_hidden()
+
+
+def test_the_empty_state_explains_what_a_prediction_produces(console_page):
+    """
+    A "bandobast" mention alone did not discriminate — the previous decorative
+    copy contained it too. What distinguishes a teaching empty state is that it
+    names which inputs matter and what each one changes.
+    """
+    welcome = console_page.locator("#mapWelcome")
+    body = welcome.inner_text().lower()
+
+    assert "bandobast" in body or "order" in body
+    hints = welcome.locator(".welcome-hints li")
+    assert hints.count() >= 3, "the empty state should teach which inputs matter"
+
+    hint_text = " ".join(hints.nth(i).inner_text().lower() for i in range(hints.count()))
+    for control in ("event type", "time", "date"):
+        assert control in hint_text, f"the empty state does not explain '{control}'"
