@@ -106,7 +106,11 @@ unavailable, so the pipeline degrades gracefully to whichever engines are instal
 ├── solution.py                # Demand forecasting pipeline (LGBM + XGB + CatBoost blend)
 ├── post_process.py            # Submission rescaling utility
 ├── dataset/                   # train.csv, test.csv, sample_submission.csv
+├── tests/                     # pytest suite for the engine and API
+├── .github/workflows/         # CI — runs the suite on push and PR
 ├── requirements.txt           # Web app dependencies
+├── requirements-ml.txt        # Forecasting pipeline dependencies
+├── requirements-dev.txt       # Web app + pytest
 ├── ARCHITECTURE.md            # System design reference
 └── UPGRADES_AND_ROADMAP.md    # Backlog and planned work
 ```
@@ -123,14 +127,30 @@ pip install -r requirements.txt
 python3 app.py
 ```
 
-The server starts on `http://localhost:5000` (override with the `PORT` environment variable).
+The server starts on `http://127.0.0.1:5000`. Configure it with environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `5000` | Port to listen on |
+| `HOST` | `127.0.0.1` | Interface to bind |
+| `FLASK_DEBUG` | off | Enables the Werkzeug debugger — local use only, never on a public host |
+
+### Running the tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+278 tests cover the knowledge base, the impact model's invariants, order
+generation, the economic model, and the API contract.
 
 ### Running the forecasting pipeline
 
-`requirements.txt` covers the web app only. The pipeline needs the ML stack as well:
+`requirements.txt` covers the web app only — the pipeline needs the ML stack:
 
 ```bash
-pip install scikit-learn scipy lightgbm xgboost catboost
+pip install -r requirements-ml.txt
 python3 solution.py          # writes predictions.csv
 python3 post_process.py      # writes predictions_x1.12/1.16/1.20.csv
 ```
@@ -168,7 +188,11 @@ Response:
 }
 ```
 
-Failures return HTTP 400 with `{ "success": false, "error": "..." }`.
+Inputs are validated before the pipeline runs. An unknown event type or venue,
+a malformed date or time, a non-positive or implausible crowd, or coordinates outside the
+Bengaluru region return **400** with `{ "success": false, "error": "..." }` naming the offending
+field. Unexpected server faults return **500** with a generic message and log the traceback
+server-side.
 
 ### `GET /api/metadata`
 

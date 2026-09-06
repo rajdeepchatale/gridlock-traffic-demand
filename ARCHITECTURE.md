@@ -115,6 +115,7 @@ A single-page dashboard served as one Flask template. No build step, no framewor
 
 | Concern | Implementation |
 |---|---|
+| **Control population** | `loadMetadata()` fills the event and venue dropdowns from `/api/metadata` at startup, so they cannot drift from the knowledge base; the markup holds a static fallback list |
 | **View switching** | `switchView()` toggles map / 3D / table / economics panes; `activeView` holds the mode |
 | **2D mapping** | Leaflet 1.9.4 — `renderMap()` draws venue marker, junction markers coloured by severity, and impact radius circles |
 | **3D tactical mode** | Three.js r128 + OrbitControls — `init3DTacticalScene()` composes ~12 builder functions (stadium, roads, crowd swarms, vehicles, constables, barricades, beacons, trees, potholes) into named `THREE.Group`s, driven by `animate3DScene()` |
@@ -127,7 +128,16 @@ network access beyond the app server itself.
 
 ### 4.2 API — [`app.py`](app.py)
 
-Deliberately thin: routing, type coercion, orchestration, error shaping. No domain logic.
+Deliberately thin: routing, validation, orchestration, error shaping. No domain logic.
+
+Requests are bounded before the pipeline runs — event type and venue must exist in the knowledge
+base, timings must parse, crowd size must be positive and under 500,000, and coordinates must fall
+inside the Bengaluru region. Because the output is a deployment instruction, a bad request fails
+loudly rather than silently producing an order built on nonsense; the engine's internal fallbacks
+(defaulting an unparseable date to 18:00 today) are deliberately not reachable through the API.
+
+Status codes separate the two failure kinds: a domain rejection is a `400` naming the offending
+field, while an unexpected fault logs a traceback server-side and returns a generic `500`.
 
 | Route | Method | Purpose |
 |---|---|---|
@@ -136,7 +146,9 @@ Deliberately thin: routing, type coercion, orchestration, error shaping. No doma
 | `/api/metadata` | GET | Projects the knowledge base into UI-shaped dropdown data |
 
 `/api/metadata` returns a *projection*, not the raw knowledge base — only the fields the UI needs
-(name, icon, coordinates, capacity, zone). Internal tuning constants stay server-side.
+(name, icon, coordinates, capacity, zone). Internal tuning constants stay server-side. The dashboard
+populates its dropdowns from this endpoint, so a venue added to `bengaluru_kb.py` appears in the UI
+with no markup change.
 
 ### 4.3 Domain Engine — [`engine/`](engine/)
 
@@ -215,9 +227,11 @@ Indian mixed traffic (`alpha = 0.9`, `beta = 4.5` against the classic 0.15 / 4.0
 surge term, capped at 90 minutes:
 ```
 bpr_delay        = 3.0 x 0.9 x max(0, capacity_ratio^4.5 - 1)
-proximity_delay  = congestion_multiplier x decay x 8.0 x monsoon_factor
+proximity_delay  = congestion_multiplier x decay x 8.0
 delay            = min((bpr_delay + proximity_delay) x monsoon_factor, 90)
 ```
+The monsoon uplift is applied once, to the combined delay, so the realised increase matches the
+`monsoon_factor` reported in the seasonality notes.
 
 **⑥ Deployment effectiveness** — The counterfactual that makes the whole product argument:
 ```
@@ -392,15 +406,27 @@ Documented deliberately — these are the honest edges of a hackathon prototype.
 
 | Item | Detail |
 |---|---|
-| **Monsoon factor compounds** | In `impact_predictor.py`, `proximity_delay` already includes `monsoon_factor`, and the sum is multiplied by it again — so the proximity term scales by `1.44x`, not `1.20x`, in June–August. Intentional or not, it should be a conscious choice. |
 | **No deploy configuration in-repo** | The README links a Vercel deployment, but there is no `vercel.json`, `Procfile`, or `Dockerfile` tracked. The hosted build is not reproducible from this repository alone. |
-| **`debug=True` is hardcoded** | `app.run(debug=True, ...)` ships the Werkzeug debugger. Fine locally; it must not reach a public host. |
 | **No persistence layer** | Prediction history lives in browser `localStorage` only — per-device, clearable, invisible to the server. Nothing is auditable after the fact. |
 | **No authentication** | `/api/predict` is open. Acceptable for a demo; a real BTP deployment needs authenticated, role-scoped access. |
-| **No automated tests** | The engine is pure and dictionary-in/dictionary-out — close to ideal for unit testing — but no suite exists yet. |
-| **ML pipeline is decoupled** | `predictions.csv` never reaches the serving engine. Wiring forecast demand into `impact_predictor` as a baseline load (replacing the static hourly profile) is the most significant available architectural upgrade. |
+| **ML pipeline is decoupled** | `predictions.csv` never reaches the serving engine. Wiring forecast demand into `impact_predictor` as a baseline load — replacing the static hourly profile — is the most significant available architectural upgrade. |
 | **Client state is global** | `app.js` keeps state in module-level globals. Workable at this size; the 3D scene handles in particular would benefit from encapsulation before the file grows further. |
 | **CDN dependency** | Leaflet, Three.js, and fonts load from third-party CDNs — the dashboard degrades without public network access. |
+| **Single-process model** | No task queue or cache. Every request recomputes from scratch, which is cheap here (~28 junctions) but would not hold if the junction network grew by orders of magnitude. |
+| **Frontend is untested** | The Python engine and API are covered; `app.js` has no automated tests, and its rendering functions are only exercised by hand. |
+
+### Resolved
+
+Previously documented gaps that have since been closed:
+
+| Was | Now |
+|---|---|
+| Monsoon factor applied twice, giving a 31–43% uplift against a stated 20% | Applied once; the realised uplift matches the reported factor, asserted by test |
+| `debug=True` hardcoded, shipping the Werkzeug console | Opt-in via `FLASK_DEBUG`, off by default, binding loopback unless enabled |
+| No automated tests | 278 tests across the knowledge base, engine, and API, run in CI on Python 3.10–3.12 |
+| Unvalidated API inputs; every failure returned 400 | Inputs bounded and named on rejection; 400 and 500 separated |
+| Dropdowns hardcoded in markup, `/api/metadata` unused | Dropdowns populated from the endpoint, with the markup as fallback |
+| Custom venue supported by the API but unreachable in the UI | Coordinate inputs exposed, bounded to the Bengaluru region |
 
 ---
 
