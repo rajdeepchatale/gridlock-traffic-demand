@@ -97,3 +97,15 @@ def test_landing_uses_the_token_stylesheet(client):
     body = client.get("/").get_data(as_text=True)
     assert "tokens.css" in body
     assert "landing.css" in body
+
+
+def test_credibility_strip_matches_the_knowledge_base(client):
+    """
+    These counts were hardcoded in the template and drifted within one task of
+    being written. They are now derived, and this pins them to the real data.
+    """
+    from engine.bengaluru_kb import BTP_ZONES, EVENT_TYPES, JUNCTIONS
+
+    body = client.get("/").get_data(as_text=True)
+    for count in (len(JUNCTIONS), len(EVENT_TYPES), len(BTP_ZONES)):
+        assert f">{count}</strong>" in body, f"credibility strip is missing {count}"

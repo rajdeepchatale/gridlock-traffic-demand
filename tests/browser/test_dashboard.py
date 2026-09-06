@@ -9,6 +9,10 @@ pytestmark = pytest.mark.browser
 # city are several KB; this threshold separates the two.
 MIN_REAL_TILE_BYTES = 3000
 
+# The console is a fixed-chrome operations layout, not a responsive marketing
+# page; these are the widths it is expected to be usable at.
+VIEWPORTS_DASH = [(768, 1024), (1280, 800), (1440, 900)]
+
 
 def test_basemap_serves_real_tiles(console_page):
     tiles = []
@@ -156,3 +160,12 @@ def test_the_empty_state_explains_what_a_prediction_produces(console_page):
     hint_text = " ".join(hints.nth(i).inner_text().lower() for i in range(hints.count()))
     for control in ("event type", "time", "date"):
         assert control in hint_text, f"the empty state does not explain '{control}'"
+
+
+@pytest.mark.parametrize("width,height", VIEWPORTS_DASH)
+def test_dashboard_never_scrolls_horizontally(console_page, width, height):
+    console_page.set_viewport_size({"width": width, "height": height})
+    overflow = console_page.evaluate(
+        "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
+    assert overflow <= 0, f"{width}px viewport overflows by {overflow}px"

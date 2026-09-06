@@ -141,7 +141,8 @@ field, while an unexpected fault logs a traceback server-side and returns a gene
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/` | GET | Renders the dashboard shell |
+| `/` | GET | Renders the landing page, with figures computed server-side by the engine |
+| `/console` | GET | Renders the command console |
 | `/api/predict` | POST | Runs the three-stage pipeline, returns the combined result |
 | `/api/metadata` | GET | Projects the knowledge base into UI-shaped dropdown data |
 
@@ -413,7 +414,6 @@ Documented deliberately — these are the honest edges of a hackathon prototype.
 | **Client state is global** | `app.js` keeps state in module-level globals. Workable at this size; the 3D scene handles in particular would benefit from encapsulation before the file grows further. |
 | **CDN dependency** | Leaflet, Three.js, and fonts load from third-party CDNs — the dashboard degrades without public network access. |
 | **Single-process model** | No task queue or cache. Every request recomputes from scratch, which is cheap here (~28 junctions) but would not hold if the junction network grew by orders of magnitude. |
-| **Frontend is untested** | The Python engine and API are covered; `app.js` has no automated tests, and its rendering functions are only exercised by hand. |
 
 ### Resolved
 
@@ -427,6 +427,10 @@ Previously documented gaps that have since been closed:
 | Unvalidated API inputs; every failure returned 400 | Inputs bounded and named on rejection; 400 and 500 separated |
 | Dropdowns hardcoded in markup, `/api/metadata` unused | Dropdowns populated from the endpoint, with the markup as fallback |
 | Custom venue supported by the API but unreachable in the UI | Coordinate inputs exposed, bounded to the Bengaluru region |
+| Frontend untested | 19 Playwright tests across both pages and both themes, run in CI |
+| Basemap broken — CARTO returned a watermark tile with HTTP 200 | Esri canvas tiles, theme-aware, with `maxNativeZoom` so no zoom level returns a placeholder |
+| Colour defined in two places | `tokens.css` is the single source; a test fails the build if any other stylesheet holds a literal |
+| `alert()` used for errors | Inline error surface distinguishing client rejections from server faults |
 
 ---
 

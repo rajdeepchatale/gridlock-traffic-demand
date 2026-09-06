@@ -99,9 +99,15 @@ unavailable, so the pipeline degrades gracefully to whichever engines are instal
 │   ├── impact_predictor.py    # Spatial-temporal impact model
 │   ├── deployment_generator.py# Bandobast order + WhatsApp alert generation
 │   └── cost_analyzer.py       # Economic disruption & ROI model
-├── templates/index.html       # Command Center dashboard
+├── templates/
+│   ├── landing.html           # Landing page (/)
+│   └── index.html             # Command console (/console)
 ├── static/
-│   ├── css/styles.css
+│   ├── css/
+│   │   ├── tokens.css         # Design tokens — the only file with colour literals
+│   │   ├── landing.css
+│   │   └── styles.css
+│   ├── js/landing.js
 │   └── js/app.js              # Leaflet 2D map + Three.js 3D tactical mode
 ├── solution.py                # Demand forecasting pipeline (LGBM + XGB + CatBoost blend)
 ├── post_process.py            # Submission rescaling utility
@@ -140,11 +146,20 @@ console at `/console`. Configure it with environment variables:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest
+pytest                  # 342 tests — engine, API, tokens, stylesheet discipline
 ```
 
-278 tests cover the knowledge base, the impact model's invariants, order
-generation, the economic model, and the API contract.
+Browser tests run separately, since they need a real browser:
+
+```bash
+playwright install chromium
+pytest -m browser       # 19 tests — both pages, both themes, responsive
+```
+
+The default run covers the knowledge base, the impact model's invariants, order
+generation, the economic model, the API contract, WCAG contrast for every token
+pair in both themes, and the rule that no stylesheet outside `tokens.css`
+contains a colour literal.
 
 ### Running the forecasting pipeline
 

@@ -146,6 +146,21 @@ FALLBACK_FIGURES = {
 }
 
 
+def knowledge_base_scale():
+    """
+    Counts the landing page quotes as credibility markers.
+
+    Derived from the knowledge base rather than typed into the template, so they
+    cannot drift when a junction, venue, or event type is added.
+    """
+    return {
+        'junctions': len(JUNCTIONS),
+        'event_types': len(EVENT_TYPES),
+        'zones': len(BTP_ZONES),
+        'venues': len(VENUES),
+    }
+
+
 def landing_figures():
     """Run the canonical scenario and reduce it to the landing page's headline numbers."""
     impact = predict_event_impact(**LANDING_SCENARIO)
@@ -174,7 +189,7 @@ def landing():
     except Exception:
         app.logger.exception("Landing figures failed; serving fallback copy")
         figures = FALLBACK_FIGURES
-    return render_template('landing.html', figures=figures)
+    return render_template('landing.html', figures=figures, scale=knowledge_base_scale())
 
 
 @app.route('/console')
