@@ -1,0 +1,29 @@
+# Keep the serverless bundle to what the app actually imports at request time.
+# dataset/ alone is ~9.6MB of the ~10MB repository, and the serving engine never
+# reads it — the forecasting pipeline is offline and decoupled.
+
+dataset/
+predictions*.csv
+catboost_info/
+
+# Offline ML pipeline. Not imported by app.py or engine/.
+solution.py
+post_process.py
+requirements-ml.txt
+
+# Tests and their dependencies.
+tests/
+pytest.ini
+requirements-dev.txt
+
+# Documentation and planning.
+docs/
+*.md
+
+# Local tooling and scratch.
+.claude/
+.superpowers/
+.github/
+snapshots/
+__pycache__/
+*.pyc

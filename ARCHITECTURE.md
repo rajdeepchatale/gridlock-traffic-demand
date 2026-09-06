@@ -342,11 +342,18 @@ Leaflet markers, the 3D beacons, and the impact table without duplication in JS.
 ## 7. Deployment Topology
 
 ```
-Browser ──HTTPS──> Flask app (app.py)
-                     ├── templates/ + static/   (served directly)
-                     └── engine/                (in-process, no I/O)
-Browser ──HTTPS──> CDN (Leaflet, Three.js, Google Fonts)
+Browser ──HTTPS──> Vercel ──> Flask app (app.py) as one serverless function
+                                ├── /          landing page
+                                ├── /console   dashboard
+                                ├── /api/*     prediction + metadata
+                                ├── /static/*  served by Flask, not the CDN edge
+                                └── engine/    in-process, no I/O
+Browser ──HTTPS──> CDN (Leaflet, Three.js, Google Fonts, OSM tiles)
 ```
+
+Every request — including static assets and 404s — is handled by the Flask app;
+`vercel.json` routes `/(.*)` to it. That is what the platform already did by
+auto-detection, now written down so the build is reproducible from the repository.
 
 Single process, no external services, no persistence. Port comes from `PORT` (default `5000`).
 Because the engine holds no state between requests, any number of instances can run behind a load
@@ -407,7 +414,6 @@ Documented deliberately — these are the honest edges of a hackathon prototype.
 
 | Item | Detail |
 |---|---|
-| **No deploy configuration in-repo** | The README links a Vercel deployment, but there is no `vercel.json`, `Procfile`, or `Dockerfile` tracked. The hosted build is not reproducible from this repository alone. |
 | **No persistence layer** | Prediction history lives in browser `localStorage` only — per-device, clearable, invisible to the server. Nothing is auditable after the fact. |
 | **No authentication** | `/api/predict` is open. Acceptable for a demo; a real BTP deployment needs authenticated, role-scoped access. |
 | **ML pipeline is decoupled** | `predictions.csv` never reaches the serving engine. Wiring forecast demand into `impact_predictor` as a baseline load — replacing the static hourly profile — is the most significant available architectural upgrade. |
@@ -431,6 +437,7 @@ Previously documented gaps that have since been closed:
 | Basemap broken — CARTO returned a watermark tile with HTTP 200 | Esri canvas tiles, theme-aware, with `maxNativeZoom` so no zoom level returns a placeholder |
 | Colour defined in two places | `tokens.css` is the single source; a test fails the build if any other stylesheet holds a literal |
 | `alert()` used for errors | Inline error surface distinguishing client rejections from server faults |
+| No deploy configuration in-repo | `vercel.json` pins the Python build and routes every request to the Flask app; `.vercelignore` keeps the 9.6MB dataset and the test suite out of the serverless bundle |
 
 ---
 
