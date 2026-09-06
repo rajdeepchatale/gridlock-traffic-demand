@@ -12,3 +12,7 @@ design skill/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Claude Code local state and worktrees
+.claude/
+.superpowers/

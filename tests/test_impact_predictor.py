@@ -244,3 +244,36 @@ def test_evening_peak_is_the_busiest_hour():
 
 def test_hour_profile_wraps_instead_of_failing():
     assert _hour_load_profile(24) == _hour_load_profile(0)
+
+
+# ── Severity colour palette ──────────────────────────────────────────────────
+
+# The engine's colour field is the canonical machine-readable severity value and
+# carries the dark-theme hex. The dashboard resolves colour from CSS tokens
+# instead, but exports and any non-dashboard consumer rely on this staying
+# correct and in step with tokens.css.
+SEVERITY_COLOURS = {
+    "CRITICAL": "#E5484D",
+    "HIGH": "#F2820D",
+    "MODERATE": "#E0B400",
+    "LOW": "#29A46A",
+}
+
+
+def test_junction_colour_matches_its_severity(impact):
+    for junction in impact["junction_impacts"]:
+        assert junction["color"] == SEVERITY_COLOURS[junction["severity"]]
+
+
+def test_engine_colours_match_the_dark_theme_tokens():
+    """The engine's hexes must not drift from the token layer."""
+    import re
+    from pathlib import Path
+
+    tokens_css = Path(__file__).resolve().parent.parent / "static" / "css" / "tokens.css"
+    root_block = re.search(r":root\s*\{(.*?)\}", tokens_css.read_text(), re.S).group(1)
+    tokens = dict(re.findall(r"(--[\w-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;", root_block))
+
+    for severity, colour in SEVERITY_COLOURS.items():
+        token = f"--sev-{severity.lower()}"
+        assert tokens[token].upper() == colour.upper(), f"{token} drifted from the engine"

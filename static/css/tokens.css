@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════
+   ASTraM — Design Tokens
+   The only file in this project containing colour literals.
+   Every other stylesheet consumes these via var().
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+    /* Surfaces */
+    --ground: #08090B;
+    --surface-1: #0F1114;
+    --surface-2: #16191E;
+    --border: #232830;
+    --border-strong: #2F3641;
+
+    /* Text */
+    --text-hi: #E9ECEF;
+    --text-mid: #98A0AA;
+    --text-lo: #626B76;
+
+    /* Accent — one only */
+    --accent: #D4B071;
+    --accent-dim: #8A7443;
+
+    /* Severity */
+    --sev-critical: #E5484D;
+    --sev-high: #F2820D;
+    --sev-moderate: #E0B400;
+    --sev-low: #29A46A;
+
+    /* Type families */
+    --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+    /* Type scale — size / line-height */
+    --type-display: 700 44px/1.05 var(--font-sans);
+    --type-h1: 700 32px/1.15 var(--font-sans);
+    --type-h2: 600 22px/1.25 var(--font-sans);
+    --type-h3: 600 16px/1.35 var(--font-sans);
+    --type-body: 400 14px/1.6 var(--font-sans);
+    --type-data-lg: 600 28px/1.1 var(--font-mono);
+    --type-data-sm: 500 16px/1.2 var(--font-mono);
+    --type-label: 600 11px/1.2 var(--font-mono);
+
+    /* Space — 4px base */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Radius */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+    --radius-xl: 14px;
+    --radius-pill: 999px;
+
+    /* Layout — fixed chrome dimensions the dashboard grid depends on. */
+    --nav-h: 48px;
+    --ticker-h: 32px;
+    --left-w: 300px;
+
+    /* Elevation — the design leans on borders, not shadow */
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.24);
+
+    /* Motion */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+}
+
+/* Only the values that change are redefined. */
+[data-theme="light"] {
+    --ground: #F7F6F3;
+    --surface-1: #FFFFFF;
+    --surface-2: #EFEDE8;
+    --border: #DDD9D0;
+    --border-strong: #C4BFB2;
+
+    --text-hi: #16181C;
+    --text-mid: #5A6069;
+    --text-lo: #767C85;
+
+    --accent: #8A6D2F;
+    --accent-dim: #C7B183;
+
+    --sev-critical: #C4282D;
+    --sev-high: #A85A00;
+    --sev-moderate: #8A6D00;
+    --sev-low: #1B7F4F;
+
+    --shadow: 0 1px 2px rgba(16, 18, 20, 0.06), 0 8px 24px rgba(16, 18, 20, 0.08);
+}
+
+/*
+ * Theme-independent constants.
+ *
+ * These deliberately do NOT change between themes. The WhatsApp palette
+ * reproduces that app's own chrome so the dispatch simulator reads as a real
+ * phone screen, and the legend swatches match the Three.js material colours
+ * used in the 3D scene — changing either with the theme would break the
+ * resemblance they exist to create.
+ */
+:root {
+    --wa-header: #1F2C34;
+    --wa-body: #0B141A;
+    --wa-bubble: #005C4B;
+    --wa-accent: #00A884;
+    --wa-brand: #008069;
+    --wa-text: #E9EDEF;
+    --wa-text-dim: #8696A0;
+
+    --legend-bus: #D32F2F;
+    --legend-crowd: #FBC02D;
+    --legend-police: #AB47BC;
+    --legend-traffic: #42A5F5;
+    --legend-trees: #2E7D32;
+}
+
+/* Severity helpers, so markup never hardcodes a severity colour. */
+.sev-CRITICAL { --sev: var(--sev-critical); }
+.sev-HIGH     { --sev: var(--sev-high); }
+.sev-MODERATE { --sev: var(--sev-moderate); }
+.sev-LOW      { --sev: var(--sev-low); }
+
+/* The hidden attribute must beat layout display values such as flex. */
+[hidden] { display: none !important; }
+
+/* Numerics must not jitter while counters animate. */
+.tabular, [data-numeric] { font-variant-numeric: tabular-nums; }

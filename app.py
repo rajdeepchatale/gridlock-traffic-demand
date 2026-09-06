@@ -119,10 +119,82 @@ def validate_prediction_request(data):
 
 
 # ────────────────────────────────────────────────────────
+# Landing Figures
+#
+# The landing page quotes real numbers. They are produced here by running the
+# engine at request time rather than fetched by the browser, so there is nothing
+# to spin, nothing to fail, and no way for the headline to drift from the model.
+# ────────────────────────────────────────────────────────
+
+# Peak-season IPL at Chinnaswamy — the system's headline scenario.
+LANDING_SCENARIO = {
+    'event_type': 'ipl_match',
+    'venue_id': 'chinnaswamy',
+    'event_date': '2026-04-15',
+    'event_time': '19:30',
+}
+
+# Used only when the engine raises. Values are illustrative and the template
+# renders them without live framing.
+FALLBACK_FIGURES = {
+    'crowd': 34000,
+    'junctions': 6,
+    'delay_cut_pct': 48.0,
+    'savings_lakhs': 3.6,
+    'constables': 24,
+    'is_live': False,
+}
+
+
+def knowledge_base_scale():
+    """
+    Counts the landing page quotes as credibility markers.
+
+    Derived from the knowledge base rather than typed into the template, so they
+    cannot drift when a junction, venue, or event type is added.
+    """
+    return {
+        'junctions': len(JUNCTIONS),
+        'event_types': len(EVENT_TYPES),
+        'zones': len(BTP_ZONES),
+        'venues': len(VENUES),
+    }
+
+
+def landing_figures():
+    """Run the canonical scenario and reduce it to the landing page's headline numbers."""
+    impact = predict_event_impact(**LANDING_SCENARIO)
+    deployment = generate_deployment_order(impact)
+    economics = calculate_economic_impact(impact, deployment)
+    summary = impact['impact_summary']
+
+    return {
+        'crowd': impact['event']['expected_crowd'],
+        'junctions': summary['affected_junctions'],
+        'delay_cut_pct': summary['delay_reduction_pct'],
+        'savings_lakhs': economics['savings']['net_savings_lakhs'],
+        'constables': deployment['resources']['extra_constables_needed'],
+        'is_live': True,
+    }
+
+
+# ────────────────────────────────────────────────────────
 # Page Routes
 # ────────────────────────────────────────────────────────
 @app.route('/')
-def index():
+def landing():
+    """Marketing and explanation surface. Must never 500."""
+    try:
+        figures = landing_figures()
+    except Exception:
+        app.logger.exception("Landing figures failed; serving fallback copy")
+        figures = FALLBACK_FIGURES
+    return render_template('landing.html', figures=figures, scale=knowledge_base_scale())
+
+
+@app.route('/console')
+def console():
+    """The operational dashboard."""
     return render_template('index.html')
 
 

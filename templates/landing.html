@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTraM — Event-Driven Congestion Intelligence</title>
+  <meta name="description" content="Predicts junction-level traffic impact for large events in Bengaluru and generates bandobast deployment orders.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body>
+  <header class="nav">
+    <a class="nav-brand" href="/">
+      <span class="badge">BTP</span>
+      <span>ASTraM</span>
+    </a>
+    <nav class="nav-actions">
+      <button id="themeToggle" class="btn btn-ghost" type="button" aria-label="Toggle colour theme">Theme</button>
+      <a class="btn btn-primary" href="/console">Open console</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="band band-hero">
+      <p class="eyebrow">Bengaluru Traffic Police · Decision support</p>
+      <h1 class="display">
+        {{ '{:,}'.format(figures.crowd) }} people arrive at Chinnaswamy
+        in ninety minutes. {{ figures.junctions }} junctions fail.
+      </h1>
+      <p class="lede">
+        ASTraM forecasts which junctions choke, when, and by how much — then
+        writes the bandobast order that prevents it.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/console">Run a prediction</a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/rajdeepchatale/gridlock-traffic-demand">View the source</a>
+      </div>
+
+      <dl class="figures" {% if not figures.is_live %}data-static="true"{% endif %}>
+        <div class="figure">
+          <dt>Expected crowd</dt>
+          <dd data-numeric>{{ '{:,}'.format(figures.crowd) }}</dd>
+        </div>
+        <div class="figure">
+          <dt>Junctions hit</dt>
+          <dd data-numeric>{{ figures.junctions }}</dd>
+        </div>
+        <div class="figure">
+          <dt>Delay reduced</dt>
+          <dd data-numeric>{{ figures.delay_cut_pct }}%</dd>
+        </div>
+        <div class="figure">
+          <dt>Net saving</dt>
+          <dd data-numeric>₹{{ figures.savings_lakhs }}L</dd>
+        </div>
+      </dl>
+      {% if figures.is_live %}
+      <p class="figures-note">Computed live by the prediction engine for a peak-season IPL fixture.</p>
+      {% endif %}
+    </section>
+
+    <section id="today" class="band">
+      <h2>What happens today</h2>
+      <div class="cols">
+        <article><h3>Planned by hand</h3><p>Bandobast strength is set from experience and last year's paperwork, not from a forecast of this event at this venue at this hour.</p></article>
+        <article><h3>No junction-level view</h3><p>Congestion is known to be coming, but not which of the 28 junctions around a venue will exceed capacity, or in what order.</p></article>
+        <article><h3>No costed counterfactual</h3><p>There is no figure for what doing nothing costs, so deployment competes for resources without an argument.</p></article>
+      </div>
+    </section>
+
+    <section id="how" class="band">
+      <h2>How it works</h2>
+      <p class="lede">Eight deterministic stages. No model artifact, no inference call — identical inputs always produce an identical, auditable order.</p>
+      <ol class="pipeline">
+        <li><span class="step">01</span><h3>Seasonality</h3><p>IPL outside April–May scales to a domestic baseline; June–August adds a monsoon delay multiplier.</p></li>
+        <li><span class="step">02</span><h3>Crowd to vehicles</h3><p>Attendance becomes vehicle count at 2.5 occupancy, scaled by the event's vehicle ratio.</p></li>
+        <li><span class="step">03</span><h3>Spatial selection</h3><p>A Haversine sweep selects junctions inside an impact radius that widens with turnout.</p></li>
+        <li><span class="step">04</span><h3>Per-junction load</h3><p>Event traffic decays exponentially with distance and meets the hour's baseline road load.</p></li>
+        <li><span class="step">05</span><h3>BPR delay</h3><p>A Bureau of Public Roads volume-delay curve, recalibrated to α 0.9 / β 4.5 for Indian mixed traffic.</p></li>
+        <li><span class="step">06</span><h3>Counterfactual</h3><p>Signal override, constable presence and diversions are priced as a delay reduction, capped at 60%.</p></li>
+        <li><span class="step">07</span><h3>Severity and staffing</h3><p>Capacity and delay combine into a four-level severity that sets extra constables per junction.</p></li>
+        <li><span class="step">08</span><h3>Order and economics</h3><p>The result becomes a bandobast order and a costed comparison against doing nothing.</p></li>
+      </ol>
+    </section>
+
+    <section id="produces" class="band">
+      <h2>What it produces</h2>
+      <div class="cols">
+        <article><h3>Bandobast order</h3><p>Shift windows, per-junction constable assignments, barricade types and locations, signal overrides and diversion routes — grouped by division with the responsible inspector named.</p></article>
+        <article><h3>Dispatch brief</h3><p>The same order compressed into a low-bandwidth WhatsApp message for constables in the field.</p></article>
+        <article><h3>Cost of inaction</h3><p>Fuel, productivity, delivery SLA and emergency response priced with and without deployment, with the ROI of the intervention.</p></article>
+      </div>
+    </section>
+
+    <section id="credibility" class="band band-tight">
+      <ul class="stats">
+        <li><strong data-numeric>{{ scale.junctions }}</strong><span>real junctions mapped</span></li>
+        <li><strong data-numeric>{{ scale.event_types }}</strong><span>event types modelled</span></li>
+        <li><strong data-numeric>{{ scale.zones }}</strong><span>BTP divisions</span></li>
+        <li><strong data-numeric>8</strong><span>deterministic model stages</span></li>
+      </ul>
+    </section>
+
+    <section id="cta" class="band band-cta">
+      <h2>Open the console</h2>
+      <p class="lede">Pick an event, a venue and a time. The order is ready in under a second.</p>
+      <a class="btn btn-primary btn-lg" href="/console">Run a prediction</a>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p><strong>Prototype.</strong> Built for Gridlock Hackathon 2.0. Not an official Bengaluru Traffic Police system and not affiliated with or endorsed by BTP, Flipkart, or any event organiser. Orders and cost figures are illustrative model output, not operational instructions.</p>
+    <nav>
+      <a href="https://github.com/rajdeepchatale/gridlock-traffic-demand">Source</a>
+      <a href="https://github.com/rajdeepchatale/gridlock-traffic-demand/blob/main/ARCHITECTURE.md">Architecture</a>
+      <a href="/console">Console</a>
+    </nav>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+</body>
+</html>

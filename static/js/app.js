@@ -45,12 +45,43 @@ let animationFrameId3D = null;
 const HISTORY_KEY = 'btp_astram_event_history';
 const MAX_HISTORY = 5;
 
+/*
+ * Basemap providers. CARTO's keyless tiles were retired — they now return
+ * HTTP 200 with an "API KEY REQUIRED" watermark, so the failure is invisible
+ * to a status check. Esri's canvas basemaps need no key and ship a light and
+ * a dark variant that match our two themes.
+ */
+const BASEMAPS = {
+    dark: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: '© Esri, © OpenStreetMap contributors',
+    },
+    light: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: '© Esri, © OpenStreetMap contributors',
+    },
+};
+
+let baseLayer = null;
+
 // Helper Functions
 function formatINR(amount) {
     if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(2) + ' Cr';
     if (amount >= 100000) return '₹' + (amount / 100000).toFixed(2) + ' L';
     if (amount >= 1000) return '₹' + (amount / 1000).toFixed(1) + 'K';
     return '₹' + amount.toLocaleString('en-IN');
+}
+
+/*
+ * Severity colour resolves from CSS so it can differ per theme — a single hex
+ * cannot meet contrast on both the near-black and the off-white ground. The
+ * payload's own colour is the fallback for an unrecognised severity.
+ */
+function severityColour(severity, fallback) {
+    const token = getComputedStyle(document.documentElement)
+        .getPropertyValue(`--sev-${String(severity).toLowerCase()}`)
+        .trim();
+    return token || fallback || 'currentColor';
 }
 
 function formatNumber(n) {
@@ -80,8 +111,42 @@ function applyTheme(theme) {
     }
 
     if (map) {
+        setBasemap(theme);
         setTimeout(() => map.invalidateSize(), 200);
     }
+
+    // Severity colours differ per theme, so redraw the markers that carry them.
+    if (map && currentResult) {
+        renderMap(currentResult);
+    }
+}
+
+/*
+ * Errors render inline beside the control that caused them. alert() blocks the
+ * page, cannot be styled, and in a control room reads as a crash rather than a
+ * rejected input.
+ */
+function showError(message, kind) {
+    const surface = document.getElementById('errorSurface');
+    const text = document.getElementById('errorText');
+    if (!surface || !text) return;
+    text.textContent = message;
+    surface.dataset.kind = kind || 'client';
+    surface.hidden = false;
+}
+
+function clearError() {
+    const surface = document.getElementById('errorSurface');
+    if (surface) surface.hidden = true;
+}
+
+// Skeletons mark the panels being filled, rather than blanking the whole page
+// behind a spinner for a pipeline that returns in well under a second.
+function setLoading(isLoading) {
+    ['statsGrid', 'zoneList', 'junctionGrid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('skeleton', isLoading);
+    });
 }
 
 // Counter animation
@@ -339,7 +404,7 @@ function showSpotlight(junction) {
     content.innerHTML = `
         <div class="spotlight-name">${junction.name}</div>
         <div class="spotlight-zone">${junction.zone} Zone • ${junction.distance_km} km from venue</div>
-        <span class="spotlight-severity" style="background:${junction.color};color:${junction.severity === 'CRITICAL' || junction.severity === 'HIGH' ? '#fff' : '#12141A'}">
+        <span class="spotlight-severity" style="background:${severityColour(junction.severity, junction.color)};color:var(--ground)">
             ${junction.severity}
         </span>
         <div class="spotlight-metrics">
@@ -634,7 +699,7 @@ function triggerWhatsAppDispatch() {
     const statusText = document.getElementById('dispatchStatusText');
 
     if (!currentResult) {
-        alert('Please run a prediction first before broadcasting alerts.');
+        showError('Run a prediction before broadcasting a dispatch alert.', 'client');
         return;
     }
 
@@ -661,7 +726,6 @@ function exportReport() {
 // API Call: Prediction Engine
 async function runPrediction() {
     const btn = document.getElementById('predictBtn');
-    const loader = document.getElementById('loadingOverlay');
 
     const payload = {
         event_type: document.getElementById('eventType').value,
@@ -679,7 +743,8 @@ async function runPrediction() {
     }
 
     btn.disabled = true;
-    loader.classList.add('active');
+    clearError();
+    setLoading(true);
 
     try {
         const resp = await fetch('/api/predict', {
@@ -690,7 +755,8 @@ async function runPrediction() {
         const data = await resp.json();
 
         if (!data.success) {
-            alert('Prediction failed: ' + (data.error || 'Unknown error'));
+            showError(data.error || 'The prediction was rejected.',
+                      resp.status >= 500 ? 'server' : 'client');
             return;
         }
 
@@ -705,10 +771,10 @@ async function runPrediction() {
         switchView('map');
 
     } catch (err) {
-        alert('Error connecting to server: ' + err.message);
+        showError('Could not reach the server. Check your connection and try again.', 'server');
     } finally {
         btn.disabled = false;
-        loader.classList.remove('active');
+        setLoading(false);
     }
 }
 
@@ -850,10 +916,7 @@ function renderMap(data) {
         zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        maxZoom: 18,
-    }).addTo(map);
+    setBasemap(currentTheme);
 
     L.circle([event.venue_lat, event.venue_lon], {
         radius: event.impact_radius_km * 1000,
@@ -899,7 +962,7 @@ function renderMap(data) {
 
     junctions.forEach(j => {
         const size = j.severity === 'CRITICAL' ? 22 : j.severity === 'HIGH' ? 18 : j.severity === 'MODERATE' ? 14 : 12;
-        const color = j.color;
+        const color = severityColour(j.severity, j.color);
 
         let markerHtml = '';
         if (j.severity === 'CRITICAL') {
@@ -979,6 +1042,22 @@ function renderMap(data) {
 
     setTimeout(() => map.invalidateSize(), 200);
     mapInitialized = true;
+}
+
+// Swap the basemap to match the active theme, keeping every overlay in place.
+function setBasemap(theme) {
+    if (!map) return;
+    const provider = BASEMAPS[theme] || BASEMAPS.dark;
+    if (baseLayer) map.removeLayer(baseLayer);
+    baseLayer = L.tileLayer(provider.url, {
+        attribution: provider.attribution,
+        // Esri's canvas basemaps stop at z16 and serve a "Map data not yet
+        // available" placeholder above it — with HTTP 200, so the failure is
+        // invisible to a status check. Upscale z16 instead of requesting them.
+        maxNativeZoom: 16,
+        maxZoom: 18,
+    }).addTo(map);
+    baseLayer.bringToBack();
 }
 
 // Congestion Timeline
