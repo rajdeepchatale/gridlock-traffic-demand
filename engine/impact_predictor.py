@@ -175,19 +175,22 @@ def predict_event_impact(event_type, venue_id, event_date, event_time,
         total_delay_person_hours += (delayed_vehicles * 2.5 * delay_min / 60.0)  # 2.5 people per vehicle
         
         # Severity classification — use combined delay + capacity ratio
+        # Colours are the dark-theme severity tokens from static/css/tokens.css.
+        # The dashboard resolves colour from CSS so it can adapt per theme; this
+        # field is the canonical value for any other consumer.
         combined_score = capacity_ratio * 0.4 + (delay_min / 15.0) * 0.6
         if combined_score > 1.8 or capacity_ratio > 1.8:
             severity = "CRITICAL"
-            color = "#ff1744"
+            color = "#E5484D"
         elif combined_score > 1.2 or capacity_ratio > 1.4:
             severity = "HIGH"
-            color = "#ff6d00"
+            color = "#F2820D"
         elif combined_score > 0.6 or capacity_ratio > 1.0:
             severity = "MODERATE"
-            color = "#ffd600"
+            color = "#E0B400"
         else:
             severity = "LOW"
-            color = "#00e676"
+            color = "#29A46A"
         
         # Constables needed (above normal)
         extra_constables = 0
