@@ -27,3 +27,12 @@ docs/
 snapshots/
 __pycache__/
 *.pyc
+
+# Large media in the working tree. A `vercel` CLI deploy uploads the working
+# tree rather than the git tree, and these total ~193MB against a 250MB
+# function limit. .gitignore alone does not protect a CLI deploy.
+*.mp4
+*.pdf
+*.zip
+*.png
+*.jpg
