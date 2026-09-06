@@ -46,20 +46,23 @@ const HISTORY_KEY = 'btp_astram_event_history';
 const MAX_HISTORY = 5;
 
 /*
- * Basemap providers. CARTO's keyless tiles were retired — they now return
- * HTTP 200 with an "API KEY REQUIRED" watermark, so the failure is invisible
- * to a status check. Esri's canvas basemaps need no key and ship a light and
- * a dark variant that match our two themes.
+ * Basemap provider.
+ *
+ * CARTO's keyless tiles were retired — they return HTTP 200 with an "API KEY
+ * REQUIRED" watermark, so the failure is invisible to a status check. Esri's
+ * canvas basemaps replaced them, but only their *_Base half carries geometry:
+ * every label lives in a separate *_Reference layer. The result was a map with
+ * no street names and dark-grey roads on a dark-grey ground.
+ *
+ * OpenStreetMap carries geometry and labels in one tile, with far better
+ * hierarchy. The dark theme is produced by a CSS filter over the tile pane
+ * (see styles.css) rather than a second provider, so markers and overlays keep
+ * their true severity colours — only the tiles are inverted.
  */
 const BASEMAPS = {
-    dark: {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-        attribution: '© Esri, © OpenStreetMap contributors',
-    },
-    light: {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-        attribution: '© Esri, © OpenStreetMap contributors',
-    },
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
 };
 
 let baseLayer = null;
@@ -111,7 +114,7 @@ function applyTheme(theme) {
     }
 
     if (map) {
-        setBasemap(theme);
+        setBasemap();
         setTimeout(() => map.invalidateSize(), 200);
     }
 
@@ -916,7 +919,7 @@ function renderMap(data) {
         zoomControl: true,
     });
 
-    setBasemap(currentTheme);
+    setBasemap();
 
     L.circle([event.venue_lat, event.venue_lon], {
         radius: event.impact_radius_km * 1000,
@@ -1044,18 +1047,14 @@ function renderMap(data) {
     mapInitialized = true;
 }
 
-// Swap the basemap to match the active theme, keeping every overlay in place.
-function setBasemap(theme) {
+// Attach the basemap. Theming is handled in CSS, so this does not depend on
+// the active theme — but it stays idempotent so callers can re-run it safely.
+function setBasemap() {
     if (!map) return;
-    const provider = BASEMAPS[theme] || BASEMAPS.dark;
     if (baseLayer) map.removeLayer(baseLayer);
-    baseLayer = L.tileLayer(provider.url, {
-        attribution: provider.attribution,
-        // Esri's canvas basemaps stop at z16 and serve a "Map data not yet
-        // available" placeholder above it — with HTTP 200, so the failure is
-        // invisible to a status check. Upscale z16 instead of requesting them.
-        maxNativeZoom: 16,
-        maxZoom: 18,
+    baseLayer = L.tileLayer(BASEMAPS.url, {
+        attribution: BASEMAPS.attribution,
+        maxZoom: BASEMAPS.maxZoom,
     }).addTo(map);
     baseLayer.bringToBack();
 }

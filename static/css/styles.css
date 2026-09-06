@@ -1278,3 +1278,14 @@ body {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }
 }
+
+
+/* ══════════════════════════════════════
+   BASEMAP THEMING
+   The dark map is the light OSM tileset inverted in CSS. The filter is scoped
+   to the tile pane so markers, radius circles and the legend keep their true
+   severity colours — inverting the whole map would invert those too.
+   ══════════════════════════════════════ */
+[data-theme="dark"] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.15) saturate(0.5);
+}
