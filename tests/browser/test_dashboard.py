@@ -1,11 +1,4 @@
-"""Browser-level checks for the dashboard.
-
-NOTE: the brief's fixtures include `console_page`, which navigates to
-`/console` — a route Task 4 has not created yet. Until that route exists,
-these tests use `landing_page` (`/`) instead, which serves the same
-dashboard template and has the same `#predictBtn` / map behaviour. Swap
-back to `console_page` once Task 4 lands.
-"""
+"""Browser-level checks for the dashboard, served at /console."""
 
 import pytest
 
@@ -17,7 +10,7 @@ pytestmark = pytest.mark.browser
 MIN_REAL_TILE_BYTES = 3000
 
 
-def test_basemap_serves_real_tiles(landing_page):
+def test_basemap_serves_real_tiles(console_page):
     tiles = []
 
     def record(response):
@@ -25,9 +18,9 @@ def test_basemap_serves_real_tiles(landing_page):
         if any(host in url for host in ("arcgisonline.com", "cartocdn.com", "tile.openstreetmap.org")):
             tiles.append(response)
 
-    landing_page.on("response", record)
-    landing_page.click("#predictBtn")
-    landing_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    console_page.on("response", record)
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
 
     assert tiles, "no basemap tiles were requested"
     assert all("cartocdn.com" not in t.url for t in tiles), "still requesting keyless CARTO tiles"
@@ -39,13 +32,13 @@ def test_basemap_serves_real_tiles(landing_page):
     )
 
 
-def test_dashboard_has_no_console_errors(landing_page):
-    landing_page.click("#predictBtn")
-    landing_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
-    assert landing_page.errors == []
+def test_dashboard_has_no_console_errors(console_page):
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    assert console_page.errors == []
 
 
-def test_basemap_does_not_request_zoom_levels_esri_lacks(landing_page):
+def test_basemap_does_not_request_zoom_levels_esri_lacks(console_page):
     """
     Esri's canvas basemaps have no tiles above z16 — above it they return a
     light-grey "Map data not yet available" placeholder with HTTP 200, which is
@@ -53,10 +46,10 @@ def test_basemap_does_not_request_zoom_levels_esri_lacks(landing_page):
     to upscale z16 tiles instead of requesting levels that do not exist, so the
     map stays usable at the zoom fitBounds picks for a tight junction cluster.
     """
-    landing_page.click("#predictBtn")
-    landing_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
 
-    max_native = landing_page.evaluate(
+    max_native = console_page.evaluate(
         """() => {
             const layer = Object.values(map._layers || {})
                 .find(l => l._url && l._url.includes('arcgisonline'));

@@ -18,10 +18,16 @@ VALID_REQUEST = {
 
 # ── Dashboard ────────────────────────────────────────────────────────────
 
-def test_index_serves_the_dashboard(client):
+def test_index_serves_the_landing_page_not_the_dashboard(client):
+    """
+    The previous assertion here only checked that "ASTraM" appeared, which is
+    true of both pages — so it kept passing when / changed from the dashboard to
+    the landing page, verifying nothing. The discriminating check is the
+    dashboard's own control, which the landing page must not carry.
+    """
     response = client.get("/")
     assert response.status_code == 200
-    assert b"ASTraM" in response.data
+    assert b"predictBtn" not in response.data, "/ is still serving the dashboard"
 
 
 # ── Prediction ───────────────────────────────────────────────────────────

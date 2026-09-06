@@ -127,7 +127,8 @@ pip install -r requirements.txt
 python3 app.py
 ```
 
-The server starts on `http://127.0.0.1:5000`. Configure it with environment variables:
+The server starts on `http://127.0.0.1:5000` — the landing page at `/`, the command
+console at `/console`. Configure it with environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
