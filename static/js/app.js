@@ -45,6 +45,25 @@ let animationFrameId3D = null;
 const HISTORY_KEY = 'btp_astram_event_history';
 const MAX_HISTORY = 5;
 
+/*
+ * Basemap providers. CARTO's keyless tiles were retired — they now return
+ * HTTP 200 with an "API KEY REQUIRED" watermark, so the failure is invisible
+ * to a status check. Esri's canvas basemaps need no key and ship a light and
+ * a dark variant that match our two themes.
+ */
+const BASEMAPS = {
+    dark: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: '© Esri, © OpenStreetMap contributors',
+    },
+    light: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: '© Esri, © OpenStreetMap contributors',
+    },
+};
+
+let baseLayer = null;
+
 // Helper Functions
 function formatINR(amount) {
     if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(2) + ' Cr';
@@ -81,6 +100,10 @@ function applyTheme(theme) {
 
     if (map) {
         setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    if (map) {
+        setBasemap(theme);
     }
 }
 
@@ -850,10 +873,7 @@ function renderMap(data) {
         zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        maxZoom: 18,
-    }).addTo(map);
+    setBasemap(currentTheme);
 
     L.circle([event.venue_lat, event.venue_lon], {
         radius: event.impact_radius_km * 1000,
@@ -979,6 +999,18 @@ function renderMap(data) {
 
     setTimeout(() => map.invalidateSize(), 200);
     mapInitialized = true;
+}
+
+// Swap the basemap to match the active theme, keeping every overlay in place.
+function setBasemap(theme) {
+    if (!map) return;
+    const provider = BASEMAPS[theme] || BASEMAPS.dark;
+    if (baseLayer) map.removeLayer(baseLayer);
+    baseLayer = L.tileLayer(provider.url, {
+        attribution: provider.attribution,
+        maxZoom: 18,
+    }).addTo(map);
+    baseLayer.bringToBack();
 }
 
 // Congestion Timeline
