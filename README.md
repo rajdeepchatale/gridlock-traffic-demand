@@ -15,7 +15,14 @@ The repository holds two connected pieces:
 
 ## Live Deployment
 
-**[https://gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app)**
+| | |
+|---|---|
+| **[gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app)** | Landing page — the problem, the model, the results |
+| **[/console](https://gridlock-traffic-demand.vercel.app/console)** | The command console — run a prediction |
+
+Deployment is reproducible from this repository: [`vercel.json`](vercel.json) pins the
+Python build and routes every request to the Flask app, and [`.vercelignore`](.vercelignore)
+keeps the dataset and test suite out of the serverless bundle.
 
 ---
 

@@ -9,6 +9,9 @@ pytestmark = pytest.mark.browser
 # city are several KB; this threshold separates the two.
 MIN_REAL_TILE_BYTES = 3000
 
+# Substring identifying a basemap tile request, whoever serves it.
+BASEMAP_HOSTS_PATTERN = "tile.openstreetmap.org"
+
 # The console is a fixed-chrome operations layout, not a responsive marketing
 # page; these are the widths it is expected to be usable at.
 VIEWPORTS_DASH = [(768, 1024), (1280, 800), (1440, 900)]
@@ -42,25 +45,31 @@ def test_dashboard_has_no_console_errors(console_page):
     assert console_page.errors == []
 
 
-def test_basemap_does_not_request_zoom_levels_esri_lacks(console_page):
+def test_basemap_serves_real_tiles_at_maximum_zoom(console_page):
     """
-    Esri's canvas basemaps have no tiles above z16 — above it they return a
-    light-grey "Map data not yet available" placeholder with HTTP 200, which is
-    the same silent failure the CARTO watermark had. maxNativeZoom tells Leaflet
-    to upscale z16 tiles instead of requesting levels that do not exist, so the
-    map stays usable at the zoom fitBounds picks for a tight junction cluster.
+    Two providers have now failed in exactly this way, both with HTTP 200:
+    CARTO served an "API KEY REQUIRED" watermark, and Esri a "Map data not yet
+    available" placeholder above z16. A status check catches neither, so this
+    zooms to the configured maximum and checks the bytes are real map data.
     """
     console_page.click("#predictBtn")
     console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
 
-    max_native = console_page.evaluate(
-        """() => {
-            const layer = Object.values(map._layers || {})
-                .find(l => l._url && l._url.includes('arcgisonline'));
-            return layer ? layer.options.maxNativeZoom : null;
-        }"""
+    tiles = []
+    console_page.on(
+        "response",
+        lambda r: tiles.append(r) if BASEMAP_HOSTS_PATTERN in r.url else None,
     )
-    assert max_native == 16, f"maxNativeZoom is {max_native!r}; Esri has no tiles above z16"
+
+    console_page.evaluate("() => map.setZoom(map.getMaxZoom())")
+    console_page.wait_for_timeout(5000)
+
+    sizes = [len(t.body()) for t in tiles if t.status == 200]
+    assert sizes, "no basemap tiles were requested at maximum zoom"
+    assert max(sizes) > MIN_REAL_TILE_BYTES, (
+        f"largest tile at max zoom was {max(sizes)}b — the provider is serving a "
+        f"placeholder above the zoom levels it actually has"
+    )
 
 
 def _bg(page, selector):
