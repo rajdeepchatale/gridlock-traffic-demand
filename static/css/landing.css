@@ -106,5 +106,70 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; transition: none !important; }
+    /*
+     * Duration is collapsed rather than set to `animation: none`. The reveal
+     * starts its children at opacity 0 and the animation is what makes them
+     * visible — cancelling it outright would leave a reduced-motion visitor
+     * looking at a blank page. Letting it run in 0.01ms lands on the end state
+     * instantly, and the explicit reset below is the belt to that braces.
+     */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .reveal > *,
+    .band-hero > * {
+        opacity: 1 !important;
+        transform: none !important;
+    }
 }
+
+/* ══════════════════════════════════════
+   MOTION
+   Bands reveal as they enter the viewport; their children stagger behind them.
+   The reveal is opt-in from JS (.reveal is only added when IntersectionObserver
+   exists), so with JS disabled every band is simply visible.
+   ══════════════════════════════════════ */
+
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.reveal > * {
+    opacity: 0;
+    transform: translateY(14px);
+}
+
+.reveal.in-view > * {
+    animation: rise-in var(--dur-slow, 420ms) var(--ease-out, ease) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger, 32ms));
+}
+
+/* The hero is above the fold; it should not wait to be scrolled to. */
+.band-hero > * {
+    animation: rise-in var(--dur-slow, 420ms) var(--ease-out, ease) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger, 32ms));
+}
+
+/* Cards and pipeline steps lift under the pointer. */
+.cols article,
+.pipeline li {
+    transition: transform var(--dur-base, 200ms) var(--ease-out, ease),
+                border-color var(--dur-base, 200ms) var(--ease, ease);
+}
+
+.cols article:hover,
+.pipeline li:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-dim);
+}
+
+.btn:active { transform: scale(0.97); }
+.figure { transition: background var(--dur-base, 200ms) var(--ease, ease); }
+.figure:hover { background: var(--surface-2); }

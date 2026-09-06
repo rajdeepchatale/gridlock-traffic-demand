@@ -1299,3 +1299,132 @@ body {
 [data-theme="light"] .leaflet-tile-pane {
     filter: saturate(0.45) brightness(1.03) contrast(0.96);
 }
+
+/* ══════════════════════════════════════
+   MOTION
+   Entrances are staggered so a panel resolves as a sequence rather than a
+   single pop. --i is set on list children after each render (see stagger()
+   in app.js); everything else keys off nth-child or its own state.
+   Every rule here is disabled under prefers-reduced-motion at the bottom.
+   ══════════════════════════════════════ */
+
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes grow-up {
+    from { transform: scaleY(0.02); opacity: 0; }
+    to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* ── View panels ── */
+.view-panel.active {
+    animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* ── Staggered lists ── */
+.stats-grid > *,
+.zone-list > *,
+.junction-grid > *,
+.assignment-card,
+.impact-table tbody tr {
+    animation: rise-in 380ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* ── Timeline bars grow from the axis, in time order ── */
+.timeline-bar {
+    transform-origin: bottom center;
+    animation: grow-up 520ms var(--ease-out) both;
+    animation-delay: calc(var(--bar-index, 0) * 26ms);
+    transition: filter var(--dur-fast) var(--ease);
+}
+
+.timeline-bar:hover { filter: brightness(1.25); }
+
+/*
+ * Phase, not severity. The engine scores severity per junction from capacity
+ * and delay — never per hour — so colouring these by magnitude asserted
+ * something the data does not support.
+ */
+.timeline-bar.phase-normal     { background: var(--border-strong); }
+.timeline-bar.phase-surge      { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.timeline-bar.phase-active     { background: var(--accent); }
+.timeline-bar.phase-dispersal  { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* ── Controls respond to press ── */
+.predict-btn,
+.view-tab,
+.hud-btn,
+.filter-chip {
+    transition: transform var(--dur-fast) var(--ease-spring),
+                background-color var(--dur-fast) var(--ease),
+                border-color var(--dur-fast) var(--ease);
+}
+
+.predict-btn:active,
+.view-tab:active,
+.hud-btn:active,
+.filter-chip:active { transform: scale(0.97); }
+
+.predict-btn:not(:disabled):hover { transform: translateY(-1px); }
+
+/* ── Cards lift on hover ── */
+.analytics-card,
+.assignment-card {
+    transition: transform var(--dur-base) var(--ease-out),
+                border-color var(--dur-base) var(--ease);
+}
+
+.analytics-card:hover,
+.assignment-card:hover { transform: translateY(-2px); }
+
+/* ── Error surface arrives rather than appearing ── */
+.error-surface:not([hidden]) {
+    animation: rise-in var(--dur-base) var(--ease-out) both;
+}
+
+/* ── Map overlays ── */
+.map-legend-overlay,
+.map-filters-overlay,
+.spotlight-panel {
+    animation: fade-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* ── Focus is always visible, and never animated away ── */
+.predict-btn:focus-visible,
+.view-tab:focus-visible,
+.filter-chip:focus-visible,
+.hud-btn:focus-visible,
+.nav-icon-btn:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ── Tap targets ──
+   The severity filter chips were 23px tall, a pixel under the 24px minimum. */
+.filter-chip { min-height: 24px; }
+
+/* ══════════════════════════════════════
+   REDUCED MOTION
+   The dashboard had no guard at all. Vestibular triggers are not a preference
+   to style around — when the OS asks for stillness, everything above stops.
+   ══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

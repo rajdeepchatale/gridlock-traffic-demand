@@ -87,6 +87,38 @@ function severityColour(severity, fallback) {
     return token || fallback || 'currentColor';
 }
 
+/*
+ * barricade_type already reads "Type-B (Heavy)", so wrapping it in parentheses
+ * produced "0 (Type-B (Heavy))". It also read as though barricades were required
+ * when the count was zero.
+ */
+/*
+ * Sets --i on list children so CSS can stagger their entrance. Doing it here
+ * rather than in each template keeps the renderers free of presentation
+ * indices, and one pass covers every list on the page.
+ */
+const STAGGERED_LISTS = [
+    '.stats-grid > *',
+    '.zone-list > *',
+    '.junction-grid > *',
+    '.assignment-card',
+    '.impact-table tbody tr',
+];
+
+function stagger() {
+    STAGGERED_LISTS.forEach(selector => {
+        document.querySelectorAll(selector).forEach((el, index) => {
+            // Cap the delay so a long table does not take seconds to resolve.
+            el.style.setProperty('--i', Math.min(index, 14));
+        });
+    });
+}
+
+function formatBarricades(count, type) {
+    if (!count) return 'None required';
+    return `${count} × ${type}`;
+}
+
 function formatNumber(n) {
     return n.toLocaleString('en-IN');
 }
@@ -807,6 +839,9 @@ function renderResults(data) {
     if (scene3DInitialized) {
         update3DBeacons(data);
     }
+
+    // Children must exist before their entrance delays can be set.
+    stagger();
 }
 
 // Quick Stats
@@ -1061,24 +1096,39 @@ function setBasemap() {
 }
 
 // Congestion Timeline
+/*
+ * The timeline shows WHEN load arrives, not how severe each hour is.
+ *
+ * It previously coloured bars against the series' own maximum, so the tallest
+ * bar was always critical-red — even for an event whose impact summary, sitting
+ * directly beside it, read "0 critical, 0 high". That is a severity claim the
+ * timeline cannot support: the engine scores severity per junction from capacity
+ * and delay, and never per hour.
+ *
+ * Height carries magnitude. Colour now carries phase, which is what this data
+ * actually knows.
+ */
+const TIMELINE_PHASE_CLASS = {
+    'Pre-Event Surge': 'phase-surge',
+    'Event Active': 'phase-active',
+    'Post-Event Dispersal': 'phase-dispersal',
+    'Normal': 'phase-normal',
+};
+
 function renderTimeline(data) {
     const timeline = data.impact.timeline;
     const chart = document.getElementById('timelineChart');
     const maxCongestion = Math.max(...timeline.map(t => t.congestion_level), 1);
 
-    chart.innerHTML = timeline.map(t => {
+    chart.innerHTML = timeline.map((t, i) => {
         const height = Math.max(6, (t.congestion_level / maxCongestion) * 160);
-        let color;
-        if (t.congestion_level > maxCongestion * 0.8) color = 'var(--sev-critical)';
-        else if (t.congestion_level > maxCongestion * 0.5) color = 'var(--sev-high)';
-        else if (t.congestion_level > maxCongestion * 0.3) color = 'var(--sev-moderate)';
-        else color = 'var(--sev-low)';
+        const phaseClass = TIMELINE_PHASE_CLASS[t.phase] || 'phase-normal';
 
         return `
             <div class="timeline-bar-group">
-                <div class="timeline-bar"
-                     style="height:${height}px; background:${color};"
-                     title="${t.time} — ${t.phase} (${t.congestion_level}x)">
+                <div class="timeline-bar ${phaseClass}"
+                     style="height:${height}px; --bar-index:${i};"
+                     title="${t.time} — ${t.phase} (${t.congestion_level}x load)">
                 </div>
                 <span class="timeline-bar-label">${t.time}</span>
                 <span class="timeline-bar-phase">${t.phase}</span>
@@ -1133,7 +1183,7 @@ function renderBandobast(data) {
             </div>
             <div class="bandobast-meta-item">
                 <span class="meta-label">Barricades</span>
-                <span class="meta-value">${d.resources.barricades} (${d.event.barricade_type})</span>
+                <span class="meta-value">${formatBarricades(d.resources.barricades, d.event.barricade_type)}</span>
             </div>
             <div class="bandobast-meta-item">
                 <span class="meta-label">Signal Overrides</span>

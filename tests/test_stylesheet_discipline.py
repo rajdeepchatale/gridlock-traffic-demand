@@ -50,8 +50,12 @@ def test_tokens_file_is_the_one_that_holds_colour():
 
 def test_no_stylesheet_references_an_undefined_token():
     """
-    A var(--x) with no definition silently falls back to nothing, which is how a
-    palette migration leaves invisible text rather than an error.
+    A bare var(--x) with no definition silently resolves to nothing, which is how
+    a palette migration leaves invisible text rather than an error.
+
+    Only bare references are checked. `var(--i, 0)` carries its own fallback and
+    is safe by construction — that form is how the staggered entrances receive an
+    index set from JavaScript at render time, which no stylesheet can declare.
     """
     defined = set()
     for sheet in CSS_DIR.glob("*.css"):
@@ -59,12 +63,17 @@ def test_no_stylesheet_references_an_undefined_token():
 
     missing = {}
     for sheet in CSS_DIR.glob("*.css"):
-        used = set(re.findall(r"var\((--[\w-]+)", sheet.read_text()))
-        undefined = used - defined
+        # Group 2 is "," when a fallback follows, ")" when the reference is bare.
+        bare = {
+            name
+            for name, terminator in re.findall(r"var\(\s*(--[\w-]+)\s*([,)])", sheet.read_text())
+            if terminator == ")"
+        }
+        undefined = bare - defined
         if undefined:
             missing[sheet.name] = sorted(undefined)
 
-    assert not missing, f"undefined token references: {missing}"
+    assert not missing, f"bare var() references with no definition: {missing}"
 
 
 def test_templates_do_not_hardcode_colour():

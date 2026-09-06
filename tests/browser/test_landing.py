@@ -33,3 +33,39 @@ def test_landing_never_scrolls_horizontally(landing_page, width, height):
         "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
     )
     assert overflow <= 0, f"{width}px viewport overflows by {overflow}px"
+
+
+def test_content_is_visible_with_reduced_motion(browser, live_server):
+    """
+    The scroll reveal starts children at opacity 0 and the animation is what
+    makes them visible. Cancelling animation outright under reduced motion —
+    the obvious implementation — leaves the visitor looking at a blank page.
+    """
+    context = browser.new_context(reduced_motion="reduce")
+    page = context.new_page()
+    page.goto(f"{live_server}/", wait_until="networkidle")
+    page.evaluate("() => document.getElementById('how').scrollIntoView()")
+    page.wait_for_timeout(600)
+
+    opacities = page.eval_on_selector_all(
+        "#how > *", "els => els.map(e => parseFloat(getComputedStyle(e).opacity))"
+    )
+    assert opacities, "no children found in the pipeline band"
+    assert all(o > 0.9 for o in opacities), f"content invisible under reduced motion: {opacities}"
+
+    context.close()
+
+
+def test_content_is_visible_without_javascript(browser, live_server):
+    """The reveal is added from JS, so a no-JS visitor must still see everything."""
+    context = browser.new_context(java_script_enabled=False)
+    page = context.new_page()
+    page.goto(f"{live_server}/", wait_until="domcontentloaded")
+
+    opacities = page.eval_on_selector_all(
+        "#how > *", "els => els.map(e => parseFloat(getComputedStyle(e).opacity))"
+    )
+    assert opacities, "no children found in the pipeline band"
+    assert all(o > 0.9 for o in opacities), f"content hidden without JS: {opacities}"
+
+    context.close()

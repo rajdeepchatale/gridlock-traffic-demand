@@ -156,3 +156,79 @@ def test_dashboard_never_scrolls_horizontally(console_page, width, height):
         "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
     )
     assert overflow <= 0, f"{width}px viewport overflows by {overflow}px"
+
+
+def test_timeline_colours_do_not_claim_a_severity(console_page):
+    """
+    The bars were coloured against the series' own maximum, so the tallest was
+    always critical-red — even beside an impact summary reading "0 critical,
+    0 high". Severity is scored per junction from capacity and delay, never per
+    hour, so the bars carry phase instead.
+    """
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    console_page.click("[data-view='analytics']")
+    console_page.wait_for_selector(".timeline-bar", timeout=10000)
+
+    classes = console_page.eval_on_selector_all(
+        ".timeline-bar", "els => els.map(e => e.className)"
+    )
+    assert classes, "no timeline bars rendered"
+    assert all("phase-" in c for c in classes), "a bar carries no phase class"
+
+    # No bar may be painted with a severity token.
+    severity_backgrounds = console_page.eval_on_selector_all(
+        ".timeline-bar",
+        """els => {
+            const sev = ['--sev-critical', '--sev-high', '--sev-moderate', '--sev-low']
+                .map(t => getComputedStyle(document.documentElement)
+                    .getPropertyValue(t).trim().toLowerCase())
+                .filter(Boolean);
+            return els.map(e => {
+                const bg = getComputedStyle(e).backgroundColor;
+                return sev.some(s => {
+                    const m = s.match(/^#(..)(..)(..)$/);
+                    if (!m) return false;
+                    const rgb = `rgb(${parseInt(m[1],16)}, ${parseInt(m[2],16)}, ${parseInt(m[3],16)})`;
+                    return bg === rgb;
+                });
+            });
+        }""",
+    )
+    assert not any(severity_backgrounds), "a timeline bar is painted with a severity colour"
+
+
+def test_the_barricade_line_reads_cleanly(console_page):
+    """
+    barricade_type already reads "Type-B (Heavy)", so the template's own
+    parentheses produced "0 (Type-B (Heavy))".
+    """
+    console_page.click("#predictBtn")
+    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+    console_page.click("[data-view='operations']")
+    console_page.wait_for_timeout(1200)
+
+    text = console_page.inner_text("body")
+    assert "((" not in text and "))" not in text, "nested parentheses in the order"
+
+
+def test_the_dashboard_honours_reduced_motion(browser, live_server):
+    """The dashboard had no prefers-reduced-motion guard at all."""
+    context = browser.new_context(reduced_motion="reduce")
+    page = context.new_page()
+    page.goto(f"{live_server}/console", wait_until="networkidle")
+    page.click("#predictBtn")
+    page.wait_for_selector(".leaflet-tile-loaded", timeout=20000)
+
+    durations = page.eval_on_selector_all(
+        ".stats-grid > *, .timeline-bar",
+        "els => els.map(e => getComputedStyle(e).animationDuration)",
+    )
+    assert durations, "nothing found to check"
+    for d in durations:
+        # Chromium serialises 0.01ms as "1e-05s", so parse rather than compare
+        # strings. Anything under a millisecond is effectively instant.
+        seconds = float(d[:-2]) / 1000 if d.endswith("ms") else float(d.rstrip("s"))
+        assert seconds < 0.001, f"animation still runs under reduced motion: {d}"
+
+    context.close()
