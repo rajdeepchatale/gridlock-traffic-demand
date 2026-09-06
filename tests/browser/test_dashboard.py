@@ -43,3 +43,24 @@ def test_dashboard_has_no_console_errors(landing_page):
     landing_page.click("#predictBtn")
     landing_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
     assert landing_page.errors == []
+
+
+def test_basemap_does_not_request_zoom_levels_esri_lacks(landing_page):
+    """
+    Esri's canvas basemaps have no tiles above z16 — above it they return a
+    light-grey "Map data not yet available" placeholder with HTTP 200, which is
+    the same silent failure the CARTO watermark had. maxNativeZoom tells Leaflet
+    to upscale z16 tiles instead of requesting levels that do not exist, so the
+    map stays usable at the zoom fitBounds picks for a tight junction cluster.
+    """
+    landing_page.click("#predictBtn")
+    landing_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
+
+    max_native = landing_page.evaluate(
+        """() => {
+            const layer = Object.values(map._layers || {})
+                .find(l => l._url && l._url.includes('arcgisonline'));
+            return layer ? layer.options.maxNativeZoom : null;
+        }"""
+    )
+    assert max_native == 16, f"maxNativeZoom is {max_native!r}; Esri has no tiles above z16"

@@ -99,11 +99,8 @@ function applyTheme(theme) {
     }
 
     if (map) {
-        setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    if (map) {
         setBasemap(theme);
+        setTimeout(() => map.invalidateSize(), 200);
     }
 }
 
@@ -1008,6 +1005,10 @@ function setBasemap(theme) {
     if (baseLayer) map.removeLayer(baseLayer);
     baseLayer = L.tileLayer(provider.url, {
         attribution: provider.attribution,
+        // Esri's canvas basemaps stop at z16 and serve a "Map data not yet
+        // available" placeholder above it — with HTTP 200, so the failure is
+        // invisible to a status check. Upscale z16 instead of requesting them.
+        maxNativeZoom: 16,
         maxZoom: 18,
     }).addTo(map);
     baseLayer.bringToBack();
