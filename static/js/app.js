@@ -72,6 +72,18 @@ function formatINR(amount) {
     return '₹' + amount.toLocaleString('en-IN');
 }
 
+/*
+ * Severity colour resolves from CSS so it can differ per theme — a single hex
+ * cannot meet contrast on both the near-black and the off-white ground. The
+ * payload's own colour is the fallback for an unrecognised severity.
+ */
+function severityColour(severity, fallback) {
+    const token = getComputedStyle(document.documentElement)
+        .getPropertyValue(`--sev-${String(severity).toLowerCase()}`)
+        .trim();
+    return token || fallback || 'currentColor';
+}
+
 function formatNumber(n) {
     return n.toLocaleString('en-IN');
 }
@@ -101,6 +113,11 @@ function applyTheme(theme) {
     if (map) {
         setBasemap(theme);
         setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    // Severity colours differ per theme, so redraw the markers that carry them.
+    if (map && currentResult) {
+        renderMap(currentResult);
     }
 }
 
@@ -359,7 +376,7 @@ function showSpotlight(junction) {
     content.innerHTML = `
         <div class="spotlight-name">${junction.name}</div>
         <div class="spotlight-zone">${junction.zone} Zone • ${junction.distance_km} km from venue</div>
-        <span class="spotlight-severity" style="background:${junction.color};color:${junction.severity === 'CRITICAL' || junction.severity === 'HIGH' ? '#fff' : '#12141A'}">
+        <span class="spotlight-severity" style="background:${severityColour(junction.severity, junction.color)};color:var(--ground)">
             ${junction.severity}
         </span>
         <div class="spotlight-metrics">
@@ -916,7 +933,7 @@ function renderMap(data) {
 
     junctions.forEach(j => {
         const size = j.severity === 'CRITICAL' ? 22 : j.severity === 'HIGH' ? 18 : j.severity === 'MODERATE' ? 14 : 12;
-        const color = j.color;
+        const color = severityColour(j.severity, j.color);
 
         let markerHtml = '';
         if (j.severity === 'CRITICAL') {

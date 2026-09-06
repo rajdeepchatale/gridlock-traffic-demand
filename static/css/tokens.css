@@ -54,7 +54,14 @@
     /* Radius */
     --radius-sm: 2px;
     --radius-md: 4px;
+    --radius-lg: 8px;
+    --radius-xl: 14px;
     --radius-pill: 999px;
+
+    /* Layout — fixed chrome dimensions the dashboard grid depends on. */
+    --nav-h: 48px;
+    --ticker-h: 32px;
+    --left-w: 300px;
 
     /* Elevation — the design leans on borders, not shadow */
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.24);
@@ -86,6 +93,31 @@
     --sev-low: #1B7F4F;
 
     --shadow: 0 1px 2px rgba(16, 18, 20, 0.06), 0 8px 24px rgba(16, 18, 20, 0.08);
+}
+
+/*
+ * Theme-independent constants.
+ *
+ * These deliberately do NOT change between themes. The WhatsApp palette
+ * reproduces that app's own chrome so the dispatch simulator reads as a real
+ * phone screen, and the legend swatches match the Three.js material colours
+ * used in the 3D scene — changing either with the theme would break the
+ * resemblance they exist to create.
+ */
+:root {
+    --wa-header: #1F2C34;
+    --wa-body: #0B141A;
+    --wa-bubble: #005C4B;
+    --wa-accent: #00A884;
+    --wa-brand: #008069;
+    --wa-text: #E9EDEF;
+    --wa-text-dim: #8696A0;
+
+    --legend-bus: #D32F2F;
+    --legend-crowd: #FBC02D;
+    --legend-police: #AB47BC;
+    --legend-traffic: #42A5F5;
+    --legend-trees: #2E7D32;
 }
 
 /* Severity helpers, so markup never hardcodes a severity colour. */
