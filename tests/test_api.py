@@ -113,3 +113,25 @@ def test_metadata_withholds_internal_tuning_constants(client):
     for event in body["event_types"].values():
         assert "congestion_multiplier" not in event
         assert "vehicle_ratio" not in event
+
+
+# ── Server configuration ─────────────────────────────────────────────────
+
+def test_debug_is_off_unless_the_environment_asks_for_it(monkeypatch):
+    """The Werkzeug debugger is a remote code execution surface — never a default."""
+    from app import _env_flag
+
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
+    assert _env_flag("FLASK_DEBUG") is False
+
+
+def test_debug_flag_accepts_the_usual_truthy_spellings(monkeypatch):
+    from app import _env_flag
+
+    for value in ("1", "true", "TRUE", "yes", "on", " True "):
+        monkeypatch.setenv("FLASK_DEBUG", value)
+        assert _env_flag("FLASK_DEBUG") is True, f"{value!r} should enable debug"
+
+    for value in ("0", "false", "no", "off", ""):
+        monkeypatch.setenv("FLASK_DEBUG", value)
+        assert _env_flag("FLASK_DEBUG") is False, f"{value!r} should not enable debug"

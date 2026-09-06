@@ -99,10 +99,25 @@ def api_metadata():
 # ────────────────────────────────────────────────────────
 # Entry Point
 # ────────────────────────────────────────────────────────
+def _env_flag(name, default=False):
+    """Read a boolean from the environment, accepting the usual truthy spellings."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 if __name__ == '__main__':
+    # Debug mode exposes the Werkzeug console, so it is opt-in via the
+    # environment rather than hardcoded — it must never reach a public host.
+    debug = _env_flag('FLASK_DEBUG', default=False)
+    host = os.environ.get('HOST', '127.0.0.1' if not debug else '0.0.0.0')
+    port = int(os.environ.get('PORT', 5000))
+
     print("=" * 65)
     print("   ASTRAM — BENGALURU TRAFFIC POLICE COMMAND SYSTEM")
     print("=" * 65)
-    print("→ Starting Command Center production server")
+    print(f"→ Starting Command Center on http://{host}:{port}")
+    print(f"→ Debug mode: {'ON' if debug else 'OFF'}")
     print("=" * 65)
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=debug, host=host, port=port)
