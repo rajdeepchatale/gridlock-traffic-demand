@@ -419,6 +419,8 @@ Documented deliberately — these are the honest edges of a hackathon prototype.
 | **ML pipeline is decoupled** | `predictions.csv` never reaches the serving engine. Wiring forecast demand into `impact_predictor` as a baseline load — replacing the static hourly profile — is the most significant available architectural upgrade. |
 | **Client state is global** | `app.js` keeps state in module-level globals. Workable at this size; the 3D scene handles in particular would benefit from encapsulation before the file grows further. |
 | **CDN dependency** | Leaflet, Three.js, and fonts load from third-party CDNs — the dashboard degrades without public network access. |
+| **The build is declared, not pinned** | `vercel.json` selects the Python runtime, but `@vercel/python` pins the builder rather than the interpreter, and `requirements.txt` declares floors (`flask>=3.0`, `numpy>=1.24`) rather than exact versions. A rebuild months from now can resolve different dependencies. Pinning would fix it; the `builds` key precludes `functions.runtime`, so the Python version would need a different mechanism. |
+| **Static assets are served by the function** | Every CSS and JS request invokes the lambda and cold-starts a numpy import to return a stylesheet. This predates the deploy config — it is what auto-detection already did — and a `@vercel/static` build for `static/` would fix it, at the cost of changing routing that currently works. |
 | **Single-process model** | No task queue or cache. Every request recomputes from scratch, which is cheap here (~28 junctions) but would not hold if the junction network grew by orders of magnitude. |
 
 ### Resolved
@@ -437,7 +439,7 @@ Previously documented gaps that have since been closed:
 | Basemap broken — CARTO returned a watermark tile with HTTP 200 | Esri canvas tiles, theme-aware, with `maxNativeZoom` so no zoom level returns a placeholder |
 | Colour defined in two places | `tokens.css` is the single source; a test fails the build if any other stylesheet holds a literal |
 | `alert()` used for errors | Inline error surface distinguishing client rejections from server faults |
-| No deploy configuration in-repo | `vercel.json` pins the Python build and routes every request to the Flask app; `.vercelignore` keeps the 9.6MB dataset and the test suite out of the serverless bundle |
+| No deploy configuration in-repo | `vercel.json` declares the Python runtime and routes every request to the Flask app; `.vercelignore` keeps the 9.6MB dataset and the test suite out of the serverless bundle |
 
 ---
 

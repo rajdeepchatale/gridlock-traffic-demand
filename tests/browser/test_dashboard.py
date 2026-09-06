@@ -9,8 +9,6 @@ pytestmark = pytest.mark.browser
 # city are several KB; this threshold separates the two.
 MIN_REAL_TILE_BYTES = 3000
 
-# Substring identifying a basemap tile request, whoever serves it.
-BASEMAP_HOSTS_PATTERN = "tile.openstreetmap.org"
 
 # The console is a fixed-chrome operations layout, not a responsive marketing
 # page; these are the widths it is expected to be usable at.
@@ -45,31 +43,11 @@ def test_dashboard_has_no_console_errors(console_page):
     assert console_page.errors == []
 
 
-def test_basemap_serves_real_tiles_at_maximum_zoom(console_page):
-    """
-    Two providers have now failed in exactly this way, both with HTTP 200:
-    CARTO served an "API KEY REQUIRED" watermark, and Esri a "Map data not yet
-    available" placeholder above z16. A status check catches neither, so this
-    zooms to the configured maximum and checks the bytes are real map data.
-    """
-    console_page.click("#predictBtn")
-    console_page.wait_for_selector(".leaflet-tile-loaded", timeout=15000)
-
-    tiles = []
-    console_page.on(
-        "response",
-        lambda r: tiles.append(r) if BASEMAP_HOSTS_PATTERN in r.url else None,
-    )
-
-    console_page.evaluate("() => map.setZoom(map.getMaxZoom())")
-    console_page.wait_for_timeout(5000)
-
-    sizes = [len(t.body()) for t in tiles if t.status == 200]
-    assert sizes, "no basemap tiles were requested at maximum zoom"
-    assert max(sizes) > MIN_REAL_TILE_BYTES, (
-        f"largest tile at max zoom was {max(sizes)}b — the provider is serving a "
-        f"placeholder above the zoom levels it actually has"
-    )
+# The max-zoom tile check lives in tests/test_basemap_config.py. It ran here as
+# a browser test, but pulled a fresh viewport of tiles from datacenter IPs on
+# every CI push — which OpenStreetMap's usage policy prohibits and their servers
+# answer with 429. It is now an offline config check plus an opt-in live fetch of
+# a single tile.
 
 
 def _bg(page, selector):

@@ -1289,3 +1289,13 @@ body {
 [data-theme="dark"] .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.15) saturate(0.5);
 }
+
+/*
+ * Light mode needs its own treatment for the same reason. Full-colour OSM puts
+ * tan arterials behind --sev-high and green parks behind --sev-low, so the
+ * severity markers stop being the loudest thing on the map. Desaturating the
+ * tiles restores that hierarchy without hiding the labels.
+ */
+[data-theme="light"] .leaflet-tile-pane {
+    filter: saturate(0.45) brightness(1.03) contrast(0.96);
+}

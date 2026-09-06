@@ -113,12 +113,13 @@ function applyTheme(theme) {
         label.textContent = 'Dark Mode';
     }
 
-    if (map) {
-        setBasemap();
-        setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    // Severity colours differ per theme, so redraw the markers that carry them.
+    /*
+     * Basemap theming is pure CSS now, so nothing here needs to touch tiles.
+     * Markers do need redrawing — severityColour() reads the resolved token at
+     * render time, so existing markers still carry the previous theme's hex.
+     * renderMap rebuilds the map and reattaches the basemap itself; calling
+     * setBasemap() here as well just fetched every tile twice.
+     */
     if (map && currentResult) {
         renderMap(currentResult);
     }

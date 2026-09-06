@@ -20,9 +20,11 @@ The repository holds two connected pieces:
 | **[gridlock-traffic-demand.vercel.app](https://gridlock-traffic-demand.vercel.app)** | Landing page — the problem, the model, the results |
 | **[/console](https://gridlock-traffic-demand.vercel.app/console)** | The command console — run a prediction |
 
-Deployment is reproducible from this repository: [`vercel.json`](vercel.json) pins the
-Python build and routes every request to the Flask app, and [`.vercelignore`](.vercelignore)
-keeps the dataset and test suite out of the serverless bundle.
+The build is declared in the repository rather than left to auto-detection:
+[`vercel.json`](vercel.json) selects the Python runtime and routes every request to the
+Flask app, and [`.vercelignore`](.vercelignore) keeps the dataset and test suite out of
+the serverless bundle. Dependency versions are floors rather than pins, and the Python
+version is the platform default, so the build is *declared* but not byte-reproducible.
 
 ---
 
