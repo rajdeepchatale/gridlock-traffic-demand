@@ -9,3 +9,6 @@ GEMINI.md
 design skill/
 *.pdf
 *.png
+.pytest_cache/
+.coverage
+htmlcov/
