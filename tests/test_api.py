@@ -135,3 +135,86 @@ def test_debug_flag_accepts_the_usual_truthy_spellings(monkeypatch):
     for value in ("0", "false", "no", "off", ""):
         monkeypatch.setenv("FLASK_DEBUG", value)
         assert _env_flag("FLASK_DEBUG") is False, f"{value!r} should not enable debug"
+
+
+# ── Input validation ─────────────────────────────────────────────────────
+
+def test_unknown_venue_returns_a_client_error(client):
+    response = client.post("/api/predict", json={**VALID_REQUEST, "venue_id": "atlantis"})
+    assert response.status_code == 400
+    assert "venue_id" in response.get_json()["error"]
+
+
+def test_validation_error_lists_the_accepted_values(client):
+    """An operator hitting the API directly should be told what is allowed."""
+    error = client.post("/api/predict", json={**VALID_REQUEST, "event_type": "nope"}).get_json()["error"]
+    assert "ipl_match" in error
+
+
+def test_negative_crowd_is_rejected_rather_than_ignored(client):
+    response = client.post("/api/predict", json={**VALID_REQUEST, "expected_crowd": -500})
+    assert response.status_code == 400
+    assert "greater than zero" in response.get_json()["error"]
+
+
+def test_absurd_crowd_is_rejected(client):
+    response = client.post("/api/predict", json={**VALID_REQUEST, "expected_crowd": 99_000_000})
+    assert response.status_code == 400
+
+
+def test_non_numeric_crowd_is_rejected_with_a_clear_message(client):
+    response = client.post("/api/predict", json={**VALID_REQUEST, "expected_crowd": "many"})
+    assert response.status_code == 400
+    assert "must be a number" in response.get_json()["error"]
+
+
+def test_blank_crowd_falls_back_to_the_venue_model(client):
+    """An untouched HTML number input submits an empty string, not null."""
+    response = client.post("/api/predict", json={**VALID_REQUEST, "expected_crowd": ""})
+    assert response.status_code == 200
+    assert response.get_json()["impact"]["event"]["expected_crowd"] > 0
+
+
+def test_malformed_date_is_rejected_instead_of_silently_defaulting(client):
+    """
+    The engine falls back to 18:00 today on an unparseable date. At the API
+    boundary that would hand an officer an order for the wrong time with no
+    signal, so the request is refused instead.
+    """
+    response = client.post("/api/predict", json={**VALID_REQUEST, "event_date": "15-04-2026"})
+    assert response.status_code == 400
+    assert "YYYY-MM-DD" in response.get_json()["error"]
+
+
+def test_malformed_time_is_rejected(client):
+    response = client.post("/api/predict", json={**VALID_REQUEST, "event_time": "7.30pm"})
+    assert response.status_code == 400
+
+
+def test_coordinates_outside_bengaluru_are_rejected(client):
+    response = client.post(
+        "/api/predict",
+        json={**VALID_REQUEST, "venue_id": "custom", "custom_lat": 48.85, "custom_lon": 2.35},
+    )
+    assert response.status_code == 400
+    assert "Bengaluru" in response.get_json()["error"]
+
+
+def test_valid_custom_coordinates_are_accepted(client):
+    response = client.post(
+        "/api/predict",
+        json={**VALID_REQUEST, "venue_id": "custom", "custom_lat": 12.9698, "custom_lon": 77.7500},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["impact"]["event"]["venue_lat"] == 12.9698
+
+
+def test_a_non_object_body_is_rejected(client):
+    response = client.post("/api/predict", json=["not", "an", "object"])
+    assert response.status_code == 400
+
+
+def test_a_request_without_json_content_type_does_not_crash(client):
+    """Flask raises 415 on get_json() for a non-JSON body; the endpoint absorbs it."""
+    response = client.post("/api/predict", data="raw text", content_type="text/plain")
+    assert response.status_code == 200

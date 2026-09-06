@@ -5,7 +5,8 @@ Event-Driven Congestion Management System for Bengaluru Traffic Police (ASTraM)
 Flask API server powering the command dashboard and prediction pipeline.
 """
 
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request
+from datetime import datetime
 import os
 
 from engine.impact_predictor import predict_event_impact
@@ -16,6 +17,105 @@ from engine.bengaluru_kb import JUNCTIONS, VENUES, EVENT_TYPES, BTP_ZONES
 app = Flask(__name__,
             template_folder='templates',
             static_folder='static')
+
+
+# ────────────────────────────────────────────────────────
+# Request Validation
+#
+# The prediction endpoint is the only write-shaped surface, and its output
+# is a deployment instruction. Inputs are bounded explicitly so that a bad
+# request fails loudly with a usable message rather than silently producing
+# an order built on nonsense.
+# ────────────────────────────────────────────────────────
+
+# Generous bounding box around the Bengaluru metropolitan region.
+LAT_BOUNDS = (12.5, 13.5)
+LON_BOUNDS = (77.0, 78.0)
+
+# Above the largest gathering Bengaluru venues can physically host.
+MAX_CROWD = 500_000
+
+
+class ValidationError(ValueError):
+    """Raised when a request cannot be turned into a well-formed prediction."""
+
+
+def _require_choice(value, allowed, field):
+    if value not in allowed:
+        raise ValidationError(
+            f"Unknown {field}: '{value}'. Expected one of: {', '.join(sorted(allowed))}"
+        )
+    return value
+
+
+def _parse_crowd(value):
+    """Crowd size is optional; when given it must be a positive, plausible integer."""
+    if value in (None, ''):
+        return None
+    try:
+        crowd = int(float(value))
+    except (TypeError, ValueError):
+        raise ValidationError(f"expected_crowd must be a number, got '{value}'")
+    if crowd <= 0:
+        raise ValidationError("expected_crowd must be greater than zero")
+    if crowd > MAX_CROWD:
+        raise ValidationError(f"expected_crowd must not exceed {MAX_CROWD:,}")
+    return crowd
+
+
+def _parse_coordinate(value, bounds, field):
+    """Coordinates are optional; when given they must fall inside Bengaluru."""
+    if value in (None, ''):
+        return None
+    try:
+        coordinate = float(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f"{field} must be a number, got '{value}'")
+    low, high = bounds
+    if not low <= coordinate <= high:
+        raise ValidationError(f"{field} must be between {low} and {high} (Bengaluru region)")
+    return coordinate
+
+
+def _parse_datetime(date_str, time_str):
+    """
+    Reject malformed timings rather than silently defaulting.
+
+    The engine falls back to 18:00 today on a parse failure, which would hand
+    an officer an order for the wrong time without ever signalling a problem.
+    """
+    try:
+        datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        raise ValidationError(
+            f"Invalid event timing '{date_str} {time_str}'. Expected date YYYY-MM-DD and time HH:MM."
+        )
+    return date_str, time_str
+
+
+def validate_prediction_request(data):
+    """Normalise and bound an incoming prediction request, or raise ValidationError."""
+    if not isinstance(data, dict):
+        raise ValidationError("Request body must be a JSON object")
+
+    event_type = data.get('event_type') or 'ipl_match'
+    venue_id = data.get('venue_id') or 'chinnaswamy'
+    event_date = data.get('event_date') or '2026-06-28'
+    event_time = data.get('event_time') or '19:30'
+
+    _require_choice(event_type, EVENT_TYPES, 'event_type')
+    _require_choice(venue_id, VENUES, 'venue_id')
+    _parse_datetime(event_date, event_time)
+
+    return {
+        'event_type': event_type,
+        'venue_id': venue_id,
+        'event_date': event_date,
+        'event_time': event_time,
+        'expected_crowd': _parse_crowd(data.get('expected_crowd')),
+        'custom_lat': _parse_coordinate(data.get('custom_lat'), LAT_BOUNDS, 'custom_lat'),
+        'custom_lon': _parse_coordinate(data.get('custom_lon'), LON_BOUNDS, 'custom_lon'),
+    }
 
 
 # ────────────────────────────────────────────────────────
@@ -37,52 +137,31 @@ def api_predict():
     deployment order, and economic cost breakdown.
     """
     try:
-        data = request.get_json()
-        
-        event_type = data.get('event_type', 'ipl_match')
-        venue_id = data.get('venue_id', 'chinnaswamy')
-        event_date = data.get('event_date', '2026-06-28')
-        event_time = data.get('event_time', '19:30')
-        expected_crowd = data.get('expected_crowd', None)
-        custom_lat = data.get('custom_lat', None)
-        custom_lon = data.get('custom_lon', None)
-        
-        if expected_crowd:
-            expected_crowd = int(expected_crowd)
-        if custom_lat:
-            custom_lat = float(custom_lat)
-        if custom_lon:
-            custom_lon = float(custom_lon)
-        
-        # Run prediction pipeline
-        impact = predict_event_impact(
-            event_type=event_type,
-            venue_id=venue_id,
-            event_date=event_date,
-            event_time=event_time,
-            expected_crowd=expected_crowd,
-            custom_lat=custom_lat,
-            custom_lon=custom_lon,
-        )
-        
-        # Generate deployment order
+        params = validate_prediction_request(request.get_json(silent=True) or {})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    try:
+        impact = predict_event_impact(**params)
         deployment = generate_deployment_order(impact)
-        
-        # Calculate economic impact
         economics = calculate_economic_impact(impact, deployment)
-        
-        return jsonify({
-            "success": True,
-            "impact": impact,
-            "deployment": deployment,
-            "economics": economics,
-        })
-        
-    except Exception as e:
+    except ValueError as exc:
+        # A domain rule rejected the request — the caller can act on this.
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        # Anything else is a server fault. Log it, but never return internals.
+        app.logger.exception("Prediction pipeline failed for %s", params)
         return jsonify({
             "success": False,
-            "error": str(e),
-        }), 400
+            "error": "Prediction failed due to an internal error.",
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "impact": impact,
+        "deployment": deployment,
+        "economics": economics,
+    })
 
 
 @app.route('/api/metadata', methods=['GET'])
