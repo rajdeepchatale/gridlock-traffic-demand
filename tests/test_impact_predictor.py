@@ -155,17 +155,51 @@ def test_ipl_off_season_scales_the_crowd_down():
     assert off["seasonality"]["notes"], "an off-season adjustment must be explained to the officer"
 
 
-@pytest.mark.parametrize("month", ["06", "07", "08"])
-def test_monsoon_months_raise_the_delay_multiplier(month):
-    monsoon = predict_event_impact("concert", "palace_grounds", f"2026-{month}-15", "19:30")
-    dry = predict_event_impact("concert", "palace_grounds", "2026-02-15", "19:30")
+# All Wednesdays in 2026, so the weekend factor cannot confound the comparison —
+# it feeds the BPR term at the fourth power and swamps the monsoon effect.
+DRY_WEDNESDAY = "2026-02-11"
+MONSOON_WEDNESDAYS = ["2026-06-17", "2026-07-15", "2026-08-12"]
 
-    assert monsoon["seasonality"]["monsoon_factor"] > 1.0
+
+@pytest.mark.parametrize("monsoon_date", MONSOON_WEDNESDAYS)
+def test_monsoon_months_raise_the_delay_multiplier(monsoon_date):
+    monsoon = predict_event_impact("concert", "palace_grounds", monsoon_date, "19:30")
+    dry = predict_event_impact("concert", "palace_grounds", DRY_WEDNESDAY, "19:30")
+
+    assert monsoon["seasonality"]["monsoon_factor"] == 1.20
     assert dry["seasonality"]["monsoon_factor"] == 1.0
     assert (
         monsoon["impact_summary"]["avg_delay_without_deployment_min"]
         > dry["impact_summary"]["avg_delay_without_deployment_min"]
     )
+
+
+@pytest.mark.parametrize("monsoon_date", MONSOON_WEDNESDAYS)
+def test_monsoon_uplift_matches_the_factor_reported_to_the_officer(monsoon_date):
+    """
+    The seasonality note tells the officer delay rises 20%, so the realised
+    delay must rise by exactly that — no more.
+
+    The uplift was previously applied twice (once inside the proximity term and
+    again to the combined delay), producing a 31-43% rise against a stated 20%.
+    Junctions pinned to the 90 minute cap are excluded, since the cap truncates
+    the ratio rather than the model understating it.
+    """
+    monsoon = predict_event_impact("concert", "palace_grounds", monsoon_date, "19:30")
+    dry = predict_event_impact("concert", "palace_grounds", DRY_WEDNESDAY, "19:30")
+
+    dry_by_id = {j["junction_id"]: j for j in dry["junction_impacts"]}
+    compared = 0
+
+    for junction in monsoon["junction_impacts"]:
+        baseline = dry_by_id[junction["junction_id"]]["delay_without_deployment_min"]
+        wet = junction["delay_without_deployment_min"]
+        if wet >= DELAY_CAP_MIN or baseline == 0:
+            continue
+        assert wet / baseline == pytest.approx(1.20, abs=0.02), junction["junction_id"]
+        compared += 1
+
+    assert compared, "no uncapped junctions were available to compare"
 
 
 def test_disruption_events_generate_no_attendee_vehicles():

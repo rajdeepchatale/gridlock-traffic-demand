@@ -147,9 +147,11 @@ def predict_event_impact(event_type, venue_id, event_date, event_time,
         # BPR delay component
         bpr_delay = free_flow_min * alpha * max(0, capacity_ratio ** beta - 1)
         
-        # Proximity surge delay (factoring monsoon delays if applicable)
-        proximity_delay = event_template["congestion_multiplier"] * decay * 8.0 * monsoon_factor
+        # Proximity surge delay
+        proximity_delay = event_template["congestion_multiplier"] * decay * 8.0
         
+        # Monsoon uplift is applied once, to the combined delay, so the realised
+        # effect matches the +20% reported in the seasonality notes.
         delay_min = (bpr_delay + proximity_delay) * monsoon_factor
         delay_min = min(delay_min, 90.0)  # Cap at 90 minutes
         
