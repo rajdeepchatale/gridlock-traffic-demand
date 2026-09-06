@@ -183,6 +183,55 @@ function update3DTabVisibility() {
 
 function onVenueChange() {
     update3DTabVisibility();
+    updateCustomCoordsVisibility();
+}
+
+// Custom Location is the only venue whose coordinates the operator supplies.
+function updateCustomCoordsVisibility() {
+    const venueSelect = document.getElementById('venueSelect');
+    const customCoords = document.getElementById('customCoords');
+    if (!venueSelect || !customCoords) return;
+    customCoords.hidden = (venueSelect.value !== 'custom');
+}
+
+// Populate a <select> from the knowledge base, preserving the current choice.
+function populateSelect(el, entries) {
+    if (!el || !entries.length) return;
+    const previous = el.value;
+    el.innerHTML = entries
+        .map(([value, label]) => `<option value="${value}">${label}</option>`)
+        .join('');
+    if (entries.some(([value]) => value === previous)) el.value = previous;
+}
+
+/*
+ * Load the dropdown options from /api/metadata rather than trusting the
+ * markup. The options were previously hardcoded in index.html, so adding a
+ * venue or event type to bengaluru_kb.py left the UI silently out of date.
+ * The markup keeps a static copy as a fallback for when this fetch fails.
+ */
+async function loadMetadata() {
+    try {
+        const resp = await fetch('/api/metadata');
+        if (!resp.ok) throw new Error(`metadata request failed: ${resp.status}`);
+        const meta = await resp.json();
+
+        populateSelect(
+            document.getElementById('eventType'),
+            Object.entries(meta.event_types || {}).map(
+                ([id, e]) => [id, `${e.icon || ''} ${e.name}`.trim()]
+            )
+        );
+
+        // Custom Location is a manual-entry escape hatch, so it sorts last.
+        const venues = Object.entries(meta.venues || {}).map(([id, v]) => [id, v.name]);
+        venues.sort((a, b) => (a[0] === 'custom') - (b[0] === 'custom'));
+        populateSelect(document.getElementById('venueSelect'), venues);
+    } catch (err) {
+        console.warn('Falling back to the venue list in the markup:', err.message);
+    } finally {
+        onVenueChange();
+    }
 }
 
 function switchView(viewName) {
@@ -621,6 +670,13 @@ async function runPrediction() {
         event_time: document.getElementById('eventTime').value,
         expected_crowd: document.getElementById('expectedCrowd').value || null,
     };
+
+    // Only a custom venue carries operator-supplied coordinates; for the known
+    // venues the server uses its own, so sending them would be misleading.
+    if (payload.venue_id === 'custom') {
+        payload.custom_lat = document.getElementById('customLat').value || null;
+        payload.custom_lon = document.getElementById('customLon').value || null;
+    }
 
     btn.disabled = true;
     loader.classList.add('active');
@@ -2241,6 +2297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = today.toISOString().split('T')[0];
 
     initTheme();
+    loadMetadata();
     startClock();
     initViews();
     initKeyboardShortcuts();

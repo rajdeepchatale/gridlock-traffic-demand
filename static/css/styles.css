@@ -418,6 +418,9 @@ body {
 .config-field.half { flex: 1; }
 .config-row { display: flex; gap: 8px; }
 
+/* The hidden attribute must beat layout display values such as flex. */
+[hidden] { display: none !important; }
+
 .config-field label {
     font-size: 10px;
     font-weight: 600;
