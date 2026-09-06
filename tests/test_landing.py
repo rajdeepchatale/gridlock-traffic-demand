@@ -57,3 +57,43 @@ def test_fallback_has_the_same_shape_as_live_figures(key):
     """The template reads one shape; the fallback must not omit a field."""
     assert key in FALLBACK_FIGURES
     assert key in landing_figures()
+
+
+LANDING_BANDS = [
+    "id=\"hero\"",
+    "id=\"today\"",
+    "id=\"how\"",
+    "id=\"produces\"",
+    "id=\"credibility\"",
+    "id=\"cta\"",
+]
+
+
+@pytest.mark.parametrize("band", LANDING_BANDS)
+def test_landing_has_every_band(client, band):
+    assert band in client.get("/").get_data(as_text=True)
+
+
+def test_landing_explains_the_eight_stage_pipeline(client):
+    """The model's depth is the point of the page; the stages must be named."""
+    # Compared case-insensitively: the test verifies each stage is named, and
+    # must not dictate the heading's capitalisation.
+    body = client.get("/").get_data(as_text=True).lower()
+    for stage in ("seasonality", "spatial selection", "bpr", "counterfactual", "economics"):
+        assert stage in body, f"pipeline stage '{stage}' is missing"
+
+
+def test_landing_carries_the_prototype_disclaimer(client):
+    body = client.get("/").get_data(as_text=True).lower()
+    assert "prototype" in body
+    assert "not affiliated" in body
+
+
+def test_landing_links_to_the_console(client):
+    assert 'href="/console"' in client.get("/").get_data(as_text=True)
+
+
+def test_landing_uses_the_token_stylesheet(client):
+    body = client.get("/").get_data(as_text=True)
+    assert "tokens.css" in body
+    assert "landing.css" in body
